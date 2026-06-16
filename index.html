@@ -1,4 +1,15 @@
 <!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="utf-8">
@@ -110,6 +121,7 @@
             margin-left: 0 !important; margin-top: 0 !important;
         }
         
+        /* 導航與舒適度評分面板 */
         .nav-panel {
             position: absolute; top: 10px; left: 10px; right: 80px;
             z-index: 999; background: rgba(255, 255, 255, 0.95);
@@ -118,6 +130,7 @@
             transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
         
+        /* 面板縮小/折疊時的樣式 */
         .nav-panel.collapsed {
             max-height: 38px;
             overflow: hidden;
@@ -130,6 +143,7 @@
         }
         .nav-title-box { display: flex; align-items: center; gap: 5px; }
         
+        /* 展開與折疊的按鈕 */
         .toggle-panel-btn {
             background: none; border: none; color: #007bff; font-size: 16px; cursor: pointer; padding: 2px 8px; transition: transform 0.3s;
         }
@@ -146,10 +160,9 @@
         .badge.warning { background: #ff9900; }
         .badge.success { background: #28a745; }
 
-        /* 右側懸浮控制鈕 */
         .control-panel {
             position: fixed; right: 15px; top: 50%; transform: translateY(-50%);
-            z-index: 9999; display: flex; flex-direction: column; gap: 12px;
+            z-index: 9999; display: flex; flex-direction: column; gap: 15px;
         }
         .action-btn {
             width: 55px; height: 55px; border-radius: 50%; border: none;
@@ -161,7 +174,7 @@
         .action-btn.ar-toggle-btn { background-color: #e533ff; } 
         .action-btn.secondary { background-color: rgba(40, 167, 69, 0.9); }
 
-        /* 【新增樣式】畫面上方常駐的回報操作提示條 */
+        /* 畫面上方常駐的回報操作提示條 */
         .instruction-banner {
             position: absolute; top: 65px; left: 10px; right: 80px; z-index: 998;
             background: rgba(0, 0, 0, 0.75); color: #fff; padding: 6px 10px;
@@ -171,7 +184,7 @@
         }
         .ar-mode .instruction-banner { display: none; } /* AR 模式隱藏提示條 */
 
-        /* 【新增樣式】動態定位成功彈出提示通知 */
+        /* 動態定位成功彈出提示通知 */
         .toast-notification {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             z-index: 10000; background: rgba(40, 167, 69, 0.95); color: white;
@@ -188,7 +201,6 @@
             background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px;
             font-size: 11px; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.2); line-height: 1.4;
             max-width: 180px;
-            pointer-events: auto;
         }
         .a-dialog-allow, .a-dialog-deny, .a-dialog-container { display: none !important; }
         .legend-item { display: flex; align-items: center; margin-bottom: 3px; }
@@ -196,8 +208,21 @@
     </style>
 </head>
 <body class="map-mode"> 
-    
-    <div id="map"></div>
+    <div id="map">
+        <div class="legend" id="map-legend">
+            <strong>📍 路線區分 (外框)</strong><br>
+            <div class="legend-item"><span class="legend-color" style="border: 2px solid #3388ff; background:none;"></span> 路線 P (浩然步道)</div>
+            <div class="legend-item"><span class="legend-color" style="border: 2px solid #e533ff; background:none;"></span> 路線 O (西側外環)</div>
+            <div class="legend-item"><span class="legend-color" style="border: 2px solid #ffaa00; background:none;"></span> 路線 B (東側斜坡)</div>
+            <div class="legend-item"><span class="legend-color" style="border: 2px solid #28a745; background:none;"></span> 路線 G (綠色快捷)</div>
+            <hr style="margin: 4px 0; border: none; border-top: 1px solid #eee;">
+            <strong>⚠️ 坡度風險 (圓心)</strong><br>
+            <div class="legend-item"><span class="legend-color" style="background: #ff4d4d;"></span> 階梯 / 危險</div>
+            <div class="legend-item"><span class="legend-color" style="background: #ff9900;"></span> 陡坡 (&gt;8.33%)</div>
+            <div class="legend-item"><span class="legend-color" style="background: #ffff4d;"></span> 緩坡 / 安全</div>
+            <div class="legend-item"><span class="legend-color" style="background: #4dff4d;"></span> 平路 (0%)</div>
+        </div>
+    </div>
 
     <div class="instruction-banner" id="guide-banner">
         <i class="fa-solid fa-lightbulb" style="color: #ffcc00;"></i>
@@ -206,20 +231,6 @@
 
     <div class="toast-notification" id="location-toast">
         <i class="fa-solid fa-circle-check"></i> 定位成功！若現場有障礙，可【長按目前位置】進行通報
-    </div>
-
-    <div class="legend" id="map-legend">
-        <strong>📍 路線區分 (外框)</strong><br>
-        <div class="legend-item"><span class="legend-color" style="border: 2px solid #3388ff; background:none;"></span> 路線 P (浩然步道)</div>
-        <div class="legend-item"><span class="legend-color" style="border: 2px solid #e533ff; background:none;"></span> 路線 O (西側外環)</div>
-        <div class="legend-item"><span class="legend-color" style="border: 2px solid #ffaa00; background:none;"></span> 路線 B (東側斜坡)</div>
-        <div class="legend-item"><span class="legend-color" style="border: 2px solid #28a745; background:none;"></span> 路線 G (綠色快捷)</div>
-        <hr style="margin: 4px 0; border: none; border-top: 1px solid #eee;">
-        <strong>⚠️ 坡度風險 (圓心)</strong><br>
-        <div class="legend-item"><span class="legend-color" style="background: #ff4d4d;"></span> 階梯 / 危險</div>
-        <div class="legend-item"><span class="legend-color" style="background: #ff9900;"></span> 陡坡 (&gt;8.33%)</div>
-        <div class="legend-item"><span class="legend-color" style="background: #ffff4d;"></span> 緩坡 / 安全</div>
-        <div class="legend-item"><span class="legend-color" style="background: #4dff4d;"></span> 平路 (0%)</div>
     </div>
 
     <div class="nav-panel" id="nav-interface">
@@ -237,7 +248,8 @@
                 <strong>起點：</strong>工程二館 ➔ <strong>目的地：</strong>研三舍餐廳
             </div>
             <div style="font-size: 11px; font-weight: bold; color: #666; border-top: 1px dashed #ccc; padding-top: 6px;">請選擇推薦路線（依舒適度由高到低排序）：</div>
-            <div id="route-options-container"></div>
+            <div id="route-options-container">
+                </div>
         </div>
     </div>
 
@@ -273,7 +285,7 @@
 
     <script>
         // ==========================================
-        // 1. FIREBASE 雲端初始化
+        // 1. FIREBASE 初始化設定
         // ==========================================
         const firebaseConfig = {
             databaseURL: "https://nycu-accessible-map-default-rtdb.firebaseio.com/" 
@@ -282,8 +294,9 @@
         const database = firebase.database();
 
         window.activeCloudMarkers = {};
-        let selectedRouteId = 'G'; 
+        let selectedRouteId = 'G'; // 預設選取舒適度最高的路線G
 
+        // Mapbox Access Token
         mapboxgl.accessToken = 'pk.eyJ1IjoieWViaSIsImEiOiJjbXA1Nm1ham8waDNxMnlvbGRqbWJsbm1qIn0.qvKsHBXuKLCKn7gPausIjg'; 
         
         const map = new mapboxgl.Map({
@@ -302,11 +315,10 @@
         map.addControl(geolocate, 'top-right');
         map.on('load', () => { geolocate.trigger(); });
 
-        // 【新增機制】監聽手機定位成功事件，自動顯示教育引導 Toast
+        // 監聽手機定位成功事件，自動顯示教育引導 Toast
         geolocate.on('geolocate', (e) => {
             const toast = document.getElementById('location-toast');
             toast.style.display = 'block';
-            // 顯示 4.5 秒後自動淡出消失，不干擾畫面
             setTimeout(() => {
                 toast.style.animation = 'none';
                 toast.style.display = 'none';
@@ -314,7 +326,7 @@
         });
 
         // ==========================================
-        // 2. 核心四大導航路線點陣數據
+        // 2. 路線數據中文化與定義
         // ==========================================
         const routeP = [
             { id: "起點(工程二館)", lng: 120.99743, lat: 24.78846, type: "起點", slope: 0, routeId: "P", name: "浩然步道" },
@@ -389,6 +401,9 @@
         const allRoutes = { 'P': routeP, 'O': routeO, 'B': routeB, 'G': routeG };
         const rawData = [...routeP, ...routeO, ...routeB, ...routeG];
 
+        // ==========================================
+        // 3. 舒適度評分演算與動態 UI 渲染
+        // ==========================================
         const routeEvaluations = [
             { id: 'G', name: '路線 G (綠色快捷無障礙線)', score: 95, desc: '最推薦。全程無階梯，皆符合法規標準緩坡，路面平整。', badge: '最佳選擇', badgeType: 'success' },
             { id: 'P', name: '路線 P (浩然步道)', score: 60, desc: '不推薦輪椅。後半段經浩然圖書館側邊包含「連續階梯危險區域」。', badge: '有階梯危險', badgeType: 'danger' },
@@ -396,12 +411,11 @@
             { id: 'O', name: '路線 O (西側外環線)', score: 30, desc: '危險。高達 34.4% 的極危險陡坡，極易發生推行傾倒風險。', badge: '極度陡坡危險', badgeType: 'danger' }
         ];
 
-        // ==========================================
-        // 3. UI 互動與渲染機制
-        // ==========================================
         function renderRouteOptions() {
             const container = document.getElementById('route-options-container');
             container.innerHTML = '';
+            
+            // 依舒適度 score 由高到低排序
             const sorted = [...routeEvaluations].sort((a, b) => b.score - a.score);
             
             sorted.forEach(route => {
@@ -418,16 +432,19 @@
                 container.innerHTML += html;
             });
 
+            // 更新折疊狀態下的標題顯示文字，讓使用者知道目前選哪條
             const currentSelected = routeEvaluations.find(r => r.id === selectedRouteId);
             document.getElementById('nav-panel-title').innerText = `導航中: ${currentSelected.name.split(' (')[0]}`;
         }
 
+        // 選擇路線事件
         function selectRoute(routeId) {
             selectedRouteId = routeId;
             renderRouteOptions();
             updateMapLayers();
-            injectArPoints(); 
+            injectArPoints(); // 同步重繪 AR 畫面
 
+            // 選擇完路徑後，自動縮小/折疊路徑選擇面板
             const panel = document.getElementById('nav-interface');
             if (!panel.classList.contains('collapsed')) {
                 panel.classList.add('collapsed');
@@ -436,8 +453,9 @@
             }
         }
 
+        // 控制面板展開與折疊的點擊函式
         function togglePanel(event) {
-            if (event) event.stopPropagation(); 
+            if (event) event.stopPropagation(); // 防止事件冒泡
             const panel = document.getElementById('nav-interface');
             const icon = panel.querySelector('.toggle-panel-btn i');
             
@@ -451,7 +469,7 @@
         }
 
         // ==========================================
-        // 4. MAPBOX 2D 地圖與手機長按回報核心
+        // 4. MAPBOX 圖層高亮與動態切換
         // ==========================================
         let tempMarker = null; 
         let currentLngLat = null;
@@ -466,9 +484,12 @@
 
         map.on('load', () => {
             renderRouteOptions();
+
+            // 預設一開始不要全部展開擋住視野，自動縮小
             document.getElementById('nav-interface').classList.add('collapsed');
             document.querySelector('.toggle-panel-btn i').className = "fa-solid fa-chevron-down";
 
+            // 載入 GeoJSON 數據
             const featuresLine = [
                 { 'type': 'Feature', 'properties': { 'route': 'P' }, 'geometry': { 'type': 'LineString', 'coordinates': routeP.map(i => [i.lng, i.lat]) } },
                 { 'type': 'Feature', 'properties': { 'route': 'O' }, 'geometry': { 'type': 'LineString', 'coordinates': routeO.map(i => [i.lng, i.lat]) } },
@@ -476,8 +497,11 @@
                 { 'type': 'Feature', 'properties': { 'route': 'G' }, 'geometry': { 'type': 'LineString', 'coordinates': routeG.map(i => [i.lng, i.lat]) } }
             ];
             map.addSource('base-line-source', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': featuresLine } });
+            
+            // 基礎背景灰色虛線
             map.addLayer({ 'id': 'base-line-layer', 'type': 'line', 'source': 'base-line-source', 'paint': { 'line-color': '#ccc', 'line-width': 2, 'line-dasharray': [2, 2] } });
 
+            // 核心動態高亮導航線層
             map.addLayer({
                 'id': 'highlight-line-layer', 'type': 'line', 'source': 'base-line-source',
                 'paint': {
@@ -506,10 +530,11 @@
 
             updateMapLayers();
 
+            // 點擊圓點彈窗
             map.on('click', 'nodes-layer', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 const props = e.features[0].properties;
-                if(props.routeId !== selectedRouteId) return; 
+                if(props.routeId !== selectedRouteId) return; // 只允許點擊當前選擇的導航路徑節點
                 const rColor = props.routeId === 'P' ? '#3388ff' : props.routeId === 'O' ? '#e533ff' : props.routeId === 'B' ? '#ffaa00' : '#28a745';
                 const popupContent = `<div style="padding: 3px; color:#333; font-size:12px;"><h4 style="margin: 0 0 4px 0; font-size: 13px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${rColor};"></span> ${props.id}</h4><b>現地狀況：</b>${props.type}<br><b>實測坡度：</b>${props.slope}%</div>`;
                 new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupContent).addTo(map);
@@ -517,6 +542,7 @@
             map.on('mouseenter', 'nodes-layer', () => { map.getCanvas().style.cursor = 'pointer'; });
             map.on('mouseleave', 'nodes-layer', () => { map.getCanvas().style.cursor = ''; });
 
+            // FIREBASE 雲端監聽器
             database.ref('cloudReports').on('value', (snapshot) => {
                 clearAllCloudMarkers(); 
                 const data = snapshot.val();
@@ -574,44 +600,56 @@
         }
 
         // ==========================================
-        // 5. 3D AR 實境引導空間
+        // 5. AR 實景優化：大球球動態等比例縮放機制
         // ==========================================
         const sceneEl = document.querySelector('a-scene');
+        
         const injectArPoints = () => {
             const arContainer = document.getElementById('ar-points-container');
-            arContainer.innerHTML = ''; 
+            if(!arContainer) return;
+            arContainer.innerHTML = ''; // 清除舊實體
 
+            // 抓取當前在 UI 上選中的導航路徑數據
             const targetRouteData = allRoutes[selectedRouteId];
             if (!targetRouteData) return;
 
             targetRouteData.forEach((point, index) => {
-                let hexColor = '#4dff4d'; 
-                if (point.type.includes('危險') || point.type.includes('階梯')) {
-                    hexColor = '#ff4d4d'; 
-                } else if (point.slope > 8.33) {
-                    hexColor = '#ff9900'; 
-                } else if (point.slope > 0) {
-                    hexColor = '#ffff4d'; 
-                }
-
+                // 1. 建立外層球體包裝 (自帶 gps-entity-place，並綁定 class 以便動態縮放)
                 const ballEntity = document.createElement('a-sphere');
+                ballEntity.className = 'dynamic-scale-ball';
                 ballEntity.setAttribute('gps-entity-place', `latitude: ${point.lat}; longitude: ${point.lng};`);
+                
+                // 設定基礎大球尺寸 (半徑維持 1.6 的 3D 大球)
                 ballEntity.setAttribute('radius', '1.6'); 
-                ballEntity.setAttribute('material', `color: ${hexColor}; opacity: 0.85; shader: flat;`);
-                ballEntity.setAttribute('position', '0 5 0'); 
+                ballEntity.setAttribute('position', '0 5 0'); // 抬高高度，視野寬廣
 
+                // 2. 依據各點坡度或現地狀況，動態對應原來的代表色
+                let ballColor = '#4dff4d'; // 預設平路 (0%): 綠色
+                if (point.type.includes('危險') || point.type.includes('階梯')) {
+                    ballColor = '#ff4d4d'; // 階梯/危險: 紅色
+                } else if (point.slope > 8.33) {
+                    ballColor = '#ff9900'; // 陡坡: 橘色
+                } else if (point.slope > 0) {
+                    ballColor = '#ffff4d'; // 緩坡: 黃色
+                }
+                
+                // 3. 套用色彩，使用 standard 著色展現完美的 3D 光影立體感
+                ballEntity.setAttribute('material', `color: ${ballColor}; opacity: 0.85; shader: standard;`);
+
+                // 設定碰撞處理
                 ballEntity.setAttribute('ar-collision-detector', {
                     targetLat: point.lat,
                     targetLng: point.lng,
                     nodeId: point.id
                 });
 
+                // 4. 建立文字資訊標籤，漂亮地依附在球體下方
                 const textEntity = document.createElement('a-text');
                 let infoText = `📍 ${point.id}\n【${point.type}】\n坡度: ${point.slope}%`;
                 textEntity.setAttribute('value', infoText);
-                textEntity.setAttribute('scale', '16 16 16'); 
-                textEntity.setAttribute('look-at', '[gps-camera]'); 
-                textEntity.setAttribute('position', '0 2.8 0'); 
+                textEntity.setAttribute('scale', '16 16 16'); // 放大字體
+                textEntity.setAttribute('look-at', '[gps-camera]');
+                textEntity.setAttribute('position', '0 -2.8 0'); // 置於大球下方
                 textEntity.setAttribute('align', 'center');
                 textEntity.setAttribute('color', '#ffffff');
 
@@ -619,6 +657,7 @@
                 arContainer.appendChild(ballEntity);
             });
 
+            // 在 AR 畫面中佈署地面導航引導圓盤
             for (let i = 0; i < targetRouteData.length - 1; i++) {
                 const ptA = targetRouteData[i];
                 const ptB = targetRouteData[i+1];
@@ -626,11 +665,14 @@
                 const lineIndicator = document.createElement('a-entity');
                 lineIndicator.setAttribute('gps-entity-place', `latitude: ${ptA.lat}; longitude: ${ptA.lng};`);
                 lineIndicator.setAttribute('geometry', 'primitive: cylinder; radius: 1.5; height: 0.1;');
+                
                 let routeColor = selectedRouteId === 'G' ? '#28a745' : selectedRouteId === 'P' ? '#3388ff' : selectedRouteId === 'B' ? '#ffaa00' : '#e533ff';
                 lineIndicator.setAttribute('material', `color: ${routeColor}; opacity: 0.7; shader: flat;`);
-                lineIndicator.setAttribute('position', '0 0.1 0'); 
+                lineIndicator.setAttribute('position', '0 0.1 0'); // 貼齊地面
+                
                 arContainer.appendChild(lineIndicator);
                 
+                // 在中間點補上圓盤導航
                 const midLng = (ptA.lng + ptB.lng) / 2;
                 const midLat = (ptA.lat + ptB.lat) / 2;
                 const midIndicator = document.createElement('a-entity');
@@ -645,7 +687,32 @@
         if (sceneEl.hasLoaded) { injectArPoints(); } else { sceneEl.addEventListener('loaded', injectArPoints); }
 
         // ==========================================
-        // 6. 雲端路況標記控制
+        // 核心修正：全球即時運算「依距離等比例縮放機制」
+        // ==========================================
+        window.addEventListener('gps-camera-update-position', (e) => {
+            const allBalls = document.querySelectorAll('.dynamic-scale-ball');
+            allBalls.forEach(ball => {
+                if (ball.components && ball.components['gps-entity-place']) {
+                    // 獲取手機與該點位目前的真實距離 (公尺)
+                    const distance = ball.components['gps-entity-place'].distanceCurrent;
+                    
+                    if (distance && distance > 0) {
+                        // 透視等比例縮放公式：距離 25 米時為標準 1 倍大
+                        let scaleFactor = distance / 25;
+                        
+                        // 設定安全的限制範圍（保護機制：防止太近大到穿鏡、太遠小到看不見）
+                        if (scaleFactor > 1.5) scaleFactor = 1.5; // 限制最大放大至 1.5 倍
+                        if (scaleFactor < 0.2) scaleFactor = 0.2; // 限制最小縮小至 0.2 倍
+                        
+                        // 動態套用等比例縮放比例
+                        ball.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
+                    }
+                }
+            });
+        });
+
+        // ==========================================
+        // 6. 介面控制與動態視窗跑版修復
         // ==========================================
         function createCloudReportMarker(lng, lat, type, firebaseKey) {
             const marker = new mapboxgl.Marker({ color: '#d93838' }).setLngLat([lng, lat]);
@@ -686,4 +753,9 @@
         }
     </script>
 </body>
+</html>
+    <script  src="./script.js"></script>
+
+  </body>
+  
 </html>
