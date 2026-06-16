@@ -29,14 +29,12 @@
             tick: function () {
                 if (this.isExploded || !this.cameraEl) return;
                 
-                // 獲取手機相機當前的實時 GPS 座標
                 const camGps = this.cameraEl.getAttribute('gps-camera');
                 if (!camGps || camGps.currentCoords === undefined) return;
                 
                 const userLat = camGps.currentCoords.latitude;
                 const userLng = camGps.currentCoords.longitude;
 
-                // 透過 Haversine 公式計算手機與資料點之間的球體表面大圓距離（公尺）
                 const R = 6371000; 
                 const dLat = (this.data.targetLat - userLat) * Math.PI / 180;
                 const dLon = (this.data.targetLng - userLng) * Math.PI / 180;
@@ -46,7 +44,6 @@
                 const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
                 const distance = R * c;
 
-                // 當人物手持手機接近資料點半徑 12 公尺以內時觸發爆炸
                 if (distance <= 12) {
                     this.isExploded = true;
                     this.triggerExplosionEffect();
@@ -54,8 +51,6 @@
             },
             triggerExplosionEffect: function () {
                 const el = this.el;
-                
-                // 爆炸特效動畫：球體在 0.5 秒內迅速膨脹 3 倍，同時透明度歸零
                 el.setAttribute('animation', {
                     property: 'scale',
                     to: '3 3 3',
@@ -69,7 +64,6 @@
                     easing: 'linear'
                 });
 
-                // 同步將上方附著的文字清除
                 const linkedText = el.querySelector('a-text');
                 if(linkedText) {
                     linkedText.setAttribute('animation__textout', {
@@ -79,7 +73,6 @@
                     });
                 }
 
-                // 動態效果完成後，將 3D 實體從虛擬空間徹底移除
                 setTimeout(() => {
                     if (el.parentNode) {
                         el.parentNode.removeChild(el);
@@ -101,10 +94,8 @@
             transition: opacity 0.3s ease, visibility 0.3s;
         }
         
-        /* 模式切換樣式 */
         .ar-mode #map { opacity: 0; visibility: hidden; pointer-events: none; } 
 
-        /* 確保手機版相機畫面不變形且全螢幕覆蓋 */
         .a-canvas { 
             width: 100% !important; height: 100% !important; 
             min-width: 100% !important; min-height: 100% !important; 
@@ -119,7 +110,6 @@
             margin-left: 0 !important; margin-top: 0 !important;
         }
         
-        /* 導航控制面板 */
         .nav-panel {
             position: absolute; top: 10px; left: 10px; right: 80px;
             z-index: 999; background: rgba(255, 255, 255, 0.95);
@@ -159,7 +149,7 @@
         /* 右側懸浮控制鈕 */
         .control-panel {
             position: fixed; right: 15px; top: 50%; transform: translateY(-50%);
-            z-index: 9999; display: flex; flex-direction: column; gap: 15px;
+            z-index: 9999; display: flex; flex-direction: column; gap: 12px;
         }
         .action-btn {
             width: 55px; height: 55px; border-radius: 50%; border: none;
@@ -171,7 +161,28 @@
         .action-btn.ar-toggle-btn { background-color: #e533ff; } 
         .action-btn.secondary { background-color: rgba(40, 167, 69, 0.9); }
 
-        /* 地圖顏色圖例 */
+        /* 【新增樣式】畫面上方常駐的回報操作提示條 */
+        .instruction-banner {
+            position: absolute; top: 65px; left: 10px; right: 80px; z-index: 998;
+            background: rgba(0, 0, 0, 0.75); color: #fff; padding: 6px 10px;
+            border-radius: 6px; font-size: 11px; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3); pointer-events: none;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .ar-mode .instruction-banner { display: none; } /* AR 模式隱藏提示條 */
+
+        /* 【新增樣式】動態定位成功彈出提示通知 */
+        .toast-notification {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 10000; background: rgba(40, 167, 69, 0.95); color: white;
+            padding: 10px 16px; border-radius: 20px; font-size: 12px; font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; text-align: center;
+            white-space: nowrap; animation: fadeInUp 0.4s ease forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; top: 10px; } to { opacity: 1; top: 20px; }
+        }
+
         .legend {
             position: absolute; bottom: 15px; right: 15px; z-index: 30;
             background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px;
@@ -187,6 +198,15 @@
 <body class="map-mode"> 
     
     <div id="map"></div>
+
+    <div class="instruction-banner" id="guide-banner">
+        <i class="fa-solid fa-lightbulb" style="color: #ffcc00;"></i>
+        <span>提示：在地圖任意空白處【長按螢幕 1 秒】即可即時通報路況</span>
+    </div>
+
+    <div class="toast-notification" id="location-toast">
+        <i class="fa-solid fa-circle-check"></i> 定位成功！若現場有障礙，可【長按目前位置】進行通報
+    </div>
 
     <div class="legend" id="map-legend">
         <strong>📍 路線區分 (外框)</strong><br>
@@ -235,18 +255,19 @@
         </button>
     </div>
 
-    <div id="report-box" style="position: absolute; top: 220px; left: 10px; z-index: 999; background: white; padding: 12px; border-radius: 8px; color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; width: 220px; font-size: 13px;">
-        <h4 style="margin: 0 0 8px 0; color: #ff4d4d; font-size: 14px;"><i class="fa-solid fa-triangle-exclamation"></i> 雲端即時通報</h4>
-        <p style="font-size: 11px; margin: 0 0 6px 0;">座標：<span id="coord-display" style="color: #666;"></span></p>
-        <select id="obstacle-type" style="width: 100%; margin: 5px 0 8px 0; padding: 5px; border-radius: 4px; border: 1px solid #ccc; font-size: 12px;">
-            <option value="施工圍籬">🚧 施工圍籬</option>
-            <option value="違停機車/車輛">🛵 違停機車/車輛</option>
-            <option value="路面凹陷/嚴重破損">⚠️ 路面凹陷破損</option>
-            <option value="電梯/鐵捲門故障">❌ 電梯/設施故障</option>
+    <div id="report-box" style="position: absolute; bottom: 90px; left: 15px; right: 15px; margin: auto; z-index: 9999; background: white; padding: 15px; border-radius: 12px; color: #333; box-shadow: 0 4px 25px rgba(0,0,0,0.3); display: none; max-width: 320px; font-size: 14px;">
+        <h4 style="margin: 0 0 8px 0; color: #ff4d4d; font-size: 16px;"><i class="fa-solid fa-triangle-exclamation"></i> 雲端即時通報路況</h4>
+        <p style="font-size: 12px; margin: 0 0 8px 0; background: #f5f5f5; padding: 4px 8px; border-radius: 4px;">座標：<span id="coord-display" style="color: #666; font-family: monospace;"></span></p>
+        <label style="font-size: 12px; font-weight: bold; color:#555;">選擇現場障礙類型：</label>
+        <select id="obstacle-type" style="width: 100%; margin: 5px 0 12px 0; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px;">
+            <option value="施工圍籬">🚧 施工圍籬 (無法通行)</option>
+            <option value="違停機車/車輛">🛵 違停機車/車輛 (阻礙通路)</option>
+            <option value="路面凹陷/嚴重破損">⚠️ 路面凹陷破損 (推行危險)</option>
+            <option value="電梯/鐵捲門故障">❌ 電梯/設施故障 (無法登高)</option>
         </select>
-        <div style="display: flex; gap: 8px;">
-            <button id="submit-report" style="flex: 1; background: #ff4d4d; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">提交雲端</button>
-            <button id="cancel-report" style="flex: 1; background: #999; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">取消</button>
+        <div style="display: flex; gap: 10px;">
+            <button id="submit-report" style="flex: 1; background: #ff4d4d; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">提交雲端資料庫</button>
+            <button id="cancel-report" style="flex: 1; background: #999; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">取消</button>
         </div>
     </div>
 
@@ -261,7 +282,7 @@
         const database = firebase.database();
 
         window.activeCloudMarkers = {};
-        let selectedRouteId = 'G'; // 預設走最安全的快捷綠線
+        let selectedRouteId = 'G'; 
 
         mapboxgl.accessToken = 'pk.eyJ1IjoieWViaSIsImEiOiJjbXA1Nm1ham8waDNxMnlvbGRqbWJsbm1qIn0.qvKsHBXuKLCKn7gPausIjg'; 
         
@@ -280,6 +301,17 @@
         });
         map.addControl(geolocate, 'top-right');
         map.on('load', () => { geolocate.trigger(); });
+
+        // 【新增機制】監聽手機定位成功事件，自動顯示教育引導 Toast
+        geolocate.on('geolocate', (e) => {
+            const toast = document.getElementById('location-toast');
+            toast.style.display = 'block';
+            // 顯示 4.5 秒後自動淡出消失，不干擾畫面
+            setTimeout(() => {
+                toast.style.animation = 'none';
+                toast.style.display = 'none';
+            }, 4500);
+        });
 
         // ==========================================
         // 2. 核心四大導航路線點陣數據
@@ -357,7 +389,6 @@
         const allRoutes = { 'P': routeP, 'O': routeO, 'B': routeB, 'G': routeG };
         const rawData = [...routeP, ...routeO, ...routeB, ...routeG];
 
-        // 路線評分矩陣
         const routeEvaluations = [
             { id: 'G', name: '路線 G (綠色快捷無障礙線)', score: 95, desc: '最推薦。全程無階梯，皆符合法規標準緩坡，路面平整。', badge: '最佳選擇', badgeType: 'success' },
             { id: 'P', name: '路線 P (浩然步道)', score: 60, desc: '不推薦輪椅。後半段經浩然圖書館側邊包含「連續階梯危險區域」。', badge: '有階梯危險', badgeType: 'danger' },
@@ -422,12 +453,22 @@
         // ==========================================
         // 4. MAPBOX 2D 地圖與手機長按回報核心
         // ==========================================
+        let tempMarker = null; 
+        let currentLngLat = null;
+
+        function triggerReportPanel(lngLat) {
+            currentLngLat = lngLat;
+            document.getElementById('coord-display').innerText = `${currentLngLat.lng.toFixed(5)}, ${currentLngLat.lat.toFixed(5)}`;
+            document.getElementById('report-box').style.display = 'block';
+            if (tempMarker) tempMarker.remove();
+            tempMarker = new mapboxgl.Marker({ color: '#ffcc00' }).setLngLat(currentLngLat).addTo(map);
+        }
+
         map.on('load', () => {
             renderRouteOptions();
             document.getElementById('nav-interface').classList.add('collapsed');
             document.querySelector('.toggle-panel-btn i').className = "fa-solid fa-chevron-down";
 
-            // 建立路徑 GeoJSON 線條圖層
             const featuresLine = [
                 { 'type': 'Feature', 'properties': { 'route': 'P' }, 'geometry': { 'type': 'LineString', 'coordinates': routeP.map(i => [i.lng, i.lat]) } },
                 { 'type': 'Feature', 'properties': { 'route': 'O' }, 'geometry': { 'type': 'LineString', 'coordinates': routeO.map(i => [i.lng, i.lat]) } },
@@ -446,7 +487,6 @@
                 }
             });
 
-            // 建立導航數據點圖層
             const featuresPoints = rawData.map(item => ({
                 'type': 'Feature', 'geometry': { 'type': 'Point', 'coordinates': [item.lng, item.lat] },
                 'properties': { 'id': item.id, 'type': item.type, 'slope': item.slope, 'routeId': item.routeId }
@@ -466,7 +506,6 @@
 
             updateMapLayers();
 
-            // 點擊數據點彈出詳細說明資訊
             map.on('click', 'nodes-layer', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 const props = e.features[0].properties;
@@ -478,7 +517,6 @@
             map.on('mouseenter', 'nodes-layer', () => { map.getCanvas().style.cursor = 'pointer'; });
             map.on('mouseleave', 'nodes-layer', () => { map.getCanvas().style.cursor = ''; });
 
-            // 監聽 Firebase 雲端通報數據
             database.ref('cloudReports').on('value', (snapshot) => {
                 clearAllCloudMarkers(); 
                 const data = snapshot.val();
@@ -490,31 +528,28 @@
                 }
             });
 
-            // ---------------------------------------------------
-            // 🔥 手機版專屬：地圖「長按 1.2秒」喚醒即時路況通報機制
-            // ---------------------------------------------------
-            let tempMarker = null; 
-            let currentLngLat = null;
+            // 手機精準長按事件防誤觸優化
             let touchTimer = null;
+            let isMoving = false;
 
-            // 桌機電腦：點擊右鍵觸發
             map.on('contextmenu', (e) => { triggerReportPanel(e.lngLat); });
 
-            // 行動裝置：單指長按 1200毫秒 觸發
             map.on('touchstart', (e) => {
+                isMoving = false;
                 if (touchTimer) clearTimeout(touchTimer);
-                touchTimer = setTimeout(() => { triggerReportPanel(e.lngLat); }, 1200); 
+                touchTimer = setTimeout(() => {
+                    if (!isMoving) {
+                        triggerReportPanel(e.lngLat);
+                    }
+                }, 1000); 
             });
-            map.on('touchmove', () => { if (touchTimer) clearTimeout(touchTimer); }); // 拖曳移動地圖時立刻清除計時，避免誤觸
-            map.on('touchend', () => { if (touchTimer) clearTimeout(touchTimer); });
-
-            function triggerReportPanel(lngLat) {
-                currentLngLat = lngLat;
-                document.getElementById('coord-display').innerText = `${currentLngLat.lng.toFixed(5)}, ${currentLngLat.lat.toFixed(5)}`;
-                document.getElementById('report-box').style.display = 'block';
-                if (tempMarker) tempMarker.remove();
-                tempMarker = new mapboxgl.Marker({ color: '#ffcc00' }).setLngLat(currentLngLat).addTo(map);
-            }
+            map.on('touchmove', () => { 
+                isMoving = true;
+                if (touchTimer) clearTimeout(touchTimer); 
+            });
+            map.on('touchend', () => { 
+                if (touchTimer) clearTimeout(touchTimer); 
+            });
 
             document.getElementById('submit-report').addEventListener('click', () => {
                 const type = document.getElementById('obstacle-type').value;
@@ -539,7 +574,7 @@
         }
 
         // ==========================================
-        // 5. 3D AR 實境：動態球體渲染、顏色匹配、特徵文字看板
+        // 5. 3D AR 實境引導空間
         // ==========================================
         const sceneEl = document.querySelector('a-scene');
         const injectArPoints = () => {
@@ -550,37 +585,33 @@
             if (!targetRouteData) return;
 
             targetRouteData.forEach((point, index) => {
-                // 依據坡度風險標示，動態決定 3D 球體的顏色
-                let hexColor = '#4dff4d'; // 平路 = 綠色
+                let hexColor = '#4dff4d'; 
                 if (point.type.includes('危險') || point.type.includes('階梯')) {
-                    hexColor = '#ff4d4d'; // 階梯/危險 = 紅色
+                    hexColor = '#ff4d4d'; 
                 } else if (point.slope > 8.33) {
-                    hexColor = '#ff9900'; // 陡坡 = 橘色
+                    hexColor = '#ff9900'; 
                 } else if (point.slope > 0) {
-                    hexColor = '#ffff4d'; // 緩坡 = 黃色
+                    hexColor = '#ffff4d'; 
                 }
 
-                // 建立 3D 空間資料球體
                 const ballEntity = document.createElement('a-sphere');
                 ballEntity.setAttribute('gps-entity-place', `latitude: ${point.lat}; longitude: ${point.lng};`);
                 ballEntity.setAttribute('radius', '1.6'); 
                 ballEntity.setAttribute('material', `color: ${hexColor}; opacity: 0.85; shader: flat;`);
-                ballEntity.setAttribute('position', '0 5 0'); // 把球體升到高空 5 公尺，符合實境視野
+                ballEntity.setAttribute('position', '0 5 0'); 
 
-                // 綁定剛才註冊的虛擬物理碰撞偵測器
                 ballEntity.setAttribute('ar-collision-detector', {
                     targetLat: point.lat,
                     targetLng: point.lng,
                     nodeId: point.id
                 });
 
-                // 建立附著在球體上方的特徵字看板
                 const textEntity = document.createElement('a-text');
                 let infoText = `📍 ${point.id}\n【${point.type}】\n坡度: ${point.slope}%`;
                 textEntity.setAttribute('value', infoText);
                 textEntity.setAttribute('scale', '16 16 16'); 
-                textEntity.setAttribute('look-at', '[gps-camera]'); // 文字永遠正面迎向手機畫面，防範翻轉鏡像
-                textEntity.setAttribute('position', '0 2.8 0'); // 置於球體上方
+                textEntity.setAttribute('look-at', '[gps-camera]'); 
+                textEntity.setAttribute('position', '0 2.8 0'); 
                 textEntity.setAttribute('align', 'center');
                 textEntity.setAttribute('color', '#ffffff');
 
@@ -588,7 +619,6 @@
                 arContainer.appendChild(ballEntity);
             });
 
-            // 繪製地面的引導航線圓盤軌跡
             for (let i = 0; i < targetRouteData.length - 1; i++) {
                 const ptA = targetRouteData[i];
                 const ptB = targetRouteData[i+1];
