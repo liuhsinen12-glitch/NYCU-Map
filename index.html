@@ -92,6 +92,7 @@
         .badge.danger { background: #ff4d4d; }
         .badge.warning { background: #ff9900; }
         .badge.success { background: #28a745; }
+        .badge.info { background: #17a2b8; }
 
         .control-panel {
             position: fixed; right: 15px; top: 50%; transform: translateY(-50%);
@@ -126,6 +127,7 @@
             <div class="legend-item"><span class="legend-color" style="border: 2px solid #e533ff; background:none;"></span> 路線 O (西側外環)</div>
             <div class="legend-item"><span class="legend-color" style="border: 2px solid #ffaa00; background:none;"></span> 路線 B (東側斜坡)</div>
             <div class="legend-item"><span class="legend-color" style="border: 2px solid #28a745; background:none;"></span> 路線 G (綠色快捷)</div>
+            <div class="legend-item"><span class="legend-color" style="border: 2px solid #17a2b8; background:none;"></span> 路線 Other (自訂路線)</div>
             <hr style="margin: 4px 0; border: none; border-top: 1px solid #eee;">
             <strong>⚠️ 坡度風險 (圓心)</strong><br>
             <div class="legend-item"><span class="legend-color" style="background: #ff4d4d;"></span> 階梯 / 危險</div>
@@ -288,15 +290,24 @@
             { id: "節點G11", lng: 120.99711, lat: 24.78413, type: "轉彎平緩坡", slope: 5.24, routeId: "G", name: "綠色快捷無障礙線" },
             { id: "終點(研三舍)", lng: 120.99704, lat: 24.78390, type: "終點/安全抵達", slope: 12.28, routeId: "G", name: "綠色快捷無障礙線" }
         ];
+        
+        // 【新增：routeOther 自訂路線節點資料】
+        const routeOther = [
+            { id: "Other1", lng: 120.99982, lat: 24.78489, type: "平路", slope: 0, routeId: "Other", name: "自訂路線 Other" },
+            { id: "Other2", lng: 120.99981, lat: 24.78490, type: "平路", slope: 0, routeId: "Other", name: "自訂路線 Other" },
+            { id: "Other3", lng: 120.99976, lat: 24.78484, type: "平路", slope: 0, routeId: "Other", name: "自訂路線 Other" },
+            { id: "Other4", lng: 120.99962, lat: 24.78478, type: "平路", slope: 0, routeId: "Other", name: "自訂路線 Other" }
+        ];
 
-        const allRoutes = { 'P': routeP, 'O': routeO, 'B': routeB, 'G': routeG };
-        const rawData = [...routeP, ...routeO, ...routeB, ...routeG];
+        const allRoutes = { 'P': routeP, 'O': routeO, 'B': routeB, 'G': routeG, 'Other': routeOther };
+        const rawData = [...routeP, ...routeO, ...routeB, ...routeG, ...routeOther];
 
         // ==========================================
         // 3. 舒適度評分演算與動態 UI 渲染
         // ==========================================
         const routeEvaluations = [
             { id: 'G', name: '路線 G (綠色快捷無障礙線)', score: 95, desc: '最推薦。全程無階梯，皆符合法規標準緩坡，路面平整。', badge: '最佳選擇', badgeType: 'success' },
+            { id: 'Other', name: '自訂路線 Other', score: 90, desc: '使用者新增自訂路線。實測坡度為 0%，平坦安全。', badge: '全新路線', badgeType: 'info' },
             { id: 'P', name: '路線 P (浩然步道)', score: 60, desc: '不推薦輪椅。後半段經浩然圖書館側邊包含「連續階梯危險區域」。', badge: '有階梯危險', badgeType: 'danger' },
             { id: 'B', name: '路線 B (東側斜坡線)', score: 45, desc: '極度吃力。沿線多處路面凹陷破損，且含有多段 15% 以上陡坡。', badge: '路面不平/陡坡', badgeType: 'warning' },
             { id: 'O', name: '路線 O (西側外環線)', score: 30, desc: '危險。高達 34.4% 的極危險陡坡，極易發生推行傾倒風險。', badge: '極度陡坡危險', badgeType: 'danger' }
@@ -315,7 +326,7 @@
                     <div class="route-option ${isActive}" onclick="selectRoute('${route.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span><strong>${route.name}</strong></span>
-                            <span class="badge ${route.badgeType === 'success' ? 'success' : route.badgeType === 'danger' ? 'danger' : 'warning'}">${route.badge} (${route.score}分)</span>
+                            <span class="badge ${route.badgeType === 'success' ? 'success' : route.badgeType === 'danger' ? 'danger' : route.badgeType === 'info' ? 'info' : 'warning'}">${route.badge} (${route.score}分)</span>
                         </div>
                         <div class="route-meta">${route.desc}</div>
                     </div>
@@ -323,7 +334,7 @@
                 container.innerHTML += html;
             });
 
-            // 更新折疊狀態下的標題顯示文字，讓使用者知道目前選哪條
+            // 更新折疊狀態下的標題顯示文字
             const currentSelected = routeEvaluations.find(r => r.id === selectedRouteId);
             document.getElementById('nav-panel-title').innerText = `導航中: ${currentSelected.name.split(' (')[0]}`;
         }
@@ -335,7 +346,6 @@
             updateMapLayers();
             injectArPoints(); // 同步重繪 AR 畫面
 
-            // 【新增功能】：選擇完路徑後，自動縮小/折疊路徑選擇面板
             const panel = document.getElementById('nav-interface');
             if (!panel.classList.contains('collapsed')) {
                 panel.classList.add('collapsed');
@@ -344,7 +354,7 @@
             }
         }
 
-        // 【新增功能】：控制面板展開與折疊的點擊函式
+        // 控制面板展開與折疊的點擊函式
         function togglePanel(event) {
             if (event) event.stopPropagation(); // 防止事件冒泡
             const panel = document.getElementById('nav-interface');
@@ -365,27 +375,27 @@
         map.on('load', () => {
             renderRouteOptions();
 
-            // 預設一開始不要全部展開擋住視野，自動縮小
             document.getElementById('nav-interface').classList.add('collapsed');
             document.querySelector('.toggle-panel-btn i').className = "fa-solid fa-chevron-down";
 
-            // 載入 GeoJSON 數據
+            // 載入 GeoJSON 數據 (包含新增的 routeOther)
             const featuresLine = [
                 { 'type': 'Feature', 'properties': { 'route': 'P' }, 'geometry': { 'type': 'LineString', 'coordinates': routeP.map(i => [i.lng, i.lat]) } },
                 { 'type': 'Feature', 'properties': { 'route': 'O' }, 'geometry': { 'type': 'LineString', 'coordinates': routeO.map(i => [i.lng, i.lat]) } },
                 { 'type': 'Feature', 'properties': { 'route': 'B' }, 'geometry': { 'type': 'LineString', 'coordinates': routeB.map(i => [i.lng, i.lat]) } },
-                { 'type': 'Feature', 'properties': { 'route': 'G' }, 'geometry': { 'type': 'LineString', 'coordinates': routeG.map(i => [i.lng, i.lat]) } }
+                { 'type': 'Feature', 'properties': { 'route': 'G' }, 'geometry': { 'type': 'LineString', 'coordinates': routeG.map(i => [i.lng, i.lat]) } },
+                { 'type': 'Feature', 'properties': { 'route': 'Other' }, 'geometry': { 'type': 'LineString', 'coordinates': routeOther.map(i => [i.lng, i.lat]) } }
             ];
             map.addSource('base-line-source', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': featuresLine } });
             
             // 基礎背景灰色虛線
             map.addLayer({ 'id': 'base-line-layer', 'type': 'line', 'source': 'base-line-source', 'paint': { 'line-color': '#ccc', 'line-width': 2, 'line-dasharray': [2, 2] } });
 
-            // 核心動態高亮導航線層
+            // 核心動態高亮導航線層 (加入 Other 的外框顏色：水藍色 '#17a2b8')
             map.addLayer({
                 'id': 'highlight-line-layer', 'type': 'line', 'source': 'base-line-source',
                 'paint': {
-                    'line-color': ['case', ['==', ['get', 'route'], 'P'], '#3388ff', ['==', ['get', 'route'], 'O'], '#e533ff', ['==', ['get', 'route'], 'B'], '#ffaa00', '#28a745'],
+                    'line-color': ['case', ['==', ['get', 'route'], 'P'], '#3388ff', ['==', ['get', 'route'], 'O'], '#e533ff', ['==', ['get', 'route'], 'B'], '#ffaa00', ['==', ['get', 'route'], 'G'], '#28a745', '#17a2b8'],
                     'line-width': ['case', ['==', ['get', 'route'], selectedRouteId], 6, 1.5],
                     'line-opacity': ['case', ['==', ['get', 'route'], selectedRouteId], 1.0, 0.2]
                 }
@@ -402,7 +412,7 @@
                     'circle-radius': ['case', ['==', ['get', 'routeId'], selectedRouteId], 8, 4],
                     'circle-color': ['case', ['==', ['get', 'type'], '連續階梯(危險)'], '#ff4d4d', ['>', ['get', 'slope'], 8.33], '#ff9900', ['>', ['get', 'slope'], 0], '#ffff4d', '#4dff4d'],
                     'circle-stroke-width': ['case', ['==', ['get', 'routeId'], selectedRouteId], 3, 1],
-                    'circle-stroke-color': ['case', ['==', ['get', 'routeId'], 'P'], '#3388ff', ['==', ['get', 'routeId'], 'O'], '#e533ff', ['==', ['get', 'routeId'], 'B'], '#ffaa00', '#28a745'],
+                    'circle-stroke-color': ['case', ['==', ['get', 'routeId'], 'P'], '#3388ff', ['==', ['get', 'routeId'], 'O'], '#e533ff', ['==', ['get', 'routeId'], 'B'], '#ffaa00', ['==', ['get', 'routeId'], 'G'], '#28a745', '#17a2b8'],
                     'circle-opacity': ['case', ['==', ['get', 'routeId'], selectedRouteId], 1.0, 0.25],
                     'circle-stroke-opacity': ['case', ['==', ['get', 'routeId'], selectedRouteId], 1.0, 0.25]
                 }
@@ -414,8 +424,8 @@
             map.on('click', 'nodes-layer', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 const props = e.features[0].properties;
-                if(props.routeId !== selectedRouteId) return; // 只允許點擊當前選擇的導航路徑節點
-                const rColor = props.routeId === 'P' ? '#3388ff' : props.routeId === 'O' ? '#e533ff' : props.routeId === 'B' ? '#ffaa00' : '#28a745';
+                if(props.routeId !== selectedRouteId) return; 
+                const rColor = props.routeId === 'P' ? '#3388ff' : props.routeId === 'O' ? '#e533ff' : props.routeId === 'B' ? '#ffaa00' : props.routeId === 'G' ? '#28a745' : '#17a2b8';
                 const popupContent = `<div style="padding: 3px; color:#333; font-size:12px;"><h4 style="margin: 0 0 4px 0; font-size: 13px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${rColor};"></span> ${props.id}</h4><b>現地狀況：</b>${props.type}<br><b>實測坡度：</b>${props.slope}%</div>`;
                 new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupContent).addTo(map);
             });
@@ -471,19 +481,16 @@
         }
 
         // ==========================================
-        // 5. AR 實景優化：動態過濾與地面三維路徑線 (已完全拿掉文字描述)
+        // 5. AR 實景：動態地面三維圓柱引導盤 (無中文字)
         // ==========================================
         const sceneEl = document.querySelector('a-scene');
         
         const injectArPoints = () => {
             const arContainer = document.getElementById('ar-points-container');
-            arContainer.innerHTML = ''; // 徹底清除上一次的舊實體
+            arContainer.innerHTML = ''; 
 
-            // 只抓取當前在 UI 上選中的那一條路線數據
             const targetRouteData = allRoutes[selectedRouteId];
             if (!targetRouteData) return;
-
-            // 【已移除文字標籤生成邏輯，使畫面上完全不顯示中文字】
 
             // 動態在 AR 螢幕實景中佈署地面導航引導圓盤
             for (let i = 0; i < targetRouteData.length - 1; i++) {
@@ -494,9 +501,9 @@
                 lineIndicator.setAttribute('gps-entity-place', `latitude: ${ptA.lat}; longitude: ${ptA.lng};`);
                 lineIndicator.setAttribute('geometry', 'primitive: cylinder; radius: 1.5; height: 0.1;');
                 
-                let routeColor = selectedRouteId === 'G' ? '#28a745' : selectedRouteId === 'P' ? '#3388ff' : selectedRouteId === 'B' ? '#ffaa00' : '#e533ff';
+                let routeColor = selectedRouteId === 'G' ? '#28a745' : selectedRouteId === 'P' ? '#3388ff' : selectedRouteId === 'B' ? '#ffaa00' : selectedRouteId === 'Other' ? '#17a2b8' : '#e533ff';
                 lineIndicator.setAttribute('material', `color: ${routeColor}; opacity: 0.7; shader: flat;`);
-                lineIndicator.setAttribute('position', '0 0.1 0'); // 貼齊地面
+                lineIndicator.setAttribute('position', '0 0.1 0'); 
                 
                 arContainer.appendChild(lineIndicator);
                 
