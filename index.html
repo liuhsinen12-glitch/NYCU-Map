@@ -17,45 +17,41 @@
 
     <style>
         body, html { 
-            margin: 0;
-            padding: 0; width: 100%; height: 100%; 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
             overflow: hidden; font-family: sans-serif; background-color: #000;
         }
 
         #map { 
-            width: 100%;
-            height: 100%; position: absolute;
+            width: 100%; height: 100%; position: absolute;
             top: 0; left: 0; z-index: 20; 
             transition: opacity 0.3s ease, visibility 0.3s;
+            /* 修正行動裝置防長按干擾 */
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none;   
+            user-select: none;           
         }
         
-        .ar-mode #map { opacity: 0;
-            visibility: hidden; pointer-events: none; } 
+        .ar-mode #map { opacity: 0; visibility: hidden; pointer-events: none; } 
 
         .a-canvas { 
-            width: 100% !important;
-            height: 100% !important; 
+            width: 100% !important; height: 100% !important; 
             min-width: 100% !important; min-height: 100% !important; 
             position: absolute !important; top: 0 !important; left: 0 !important;
             z-index: 1 !important; object-fit: cover !important;
         }
         video { 
-            width: 100% !important;
-            height: 100% !important; 
+            width: 100% !important; height: 100% !important; 
             min-width: 100% !important; min-height: 100% !important; 
             object-fit: cover !important; position: absolute !important;
-            top: 0 !important;
-            left: 0 !important; z-index: 0 !important; 
+            top: 0 !important; left: 0 !important; z-index: 0 !important; 
             margin-left: 0 !important; margin-top: 0 !important;
         }
         
         /* 導航與舒適度評分面板 */
         .nav-panel {
-            position: absolute;
-            top: 10px; left: 10px; right: 80px;
+            position: absolute; top: 10px; left: 10px; right: 80px;
             z-index: 999; background: rgba(255, 255, 255, 0.95);
-            padding: 12px; border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 12px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             font-size: 13px; color: #333; max-height: 45vh; overflow-y: auto;
             transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
@@ -69,87 +65,62 @@
         }
 
         .nav-header { 
-            font-weight: bold;
-            margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; color: #007bff;
+            font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; color: #007bff; 
         }
-        .nav-title-box { display: flex; align-items: center; gap: 5px;
-        }
+        .nav-title-box { display: flex; align-items: center; gap: 5px; }
         
         /* 展開與折疊的按鈕 */
         .toggle-panel-btn {
-            background: none;
-            border: none; color: #007bff; font-size: 16px; cursor: pointer; padding: 2px 8px; transition: transform 0.3s;
+            background: none; border: none; color: #007bff; font-size: 16px; cursor: pointer; padding: 2px 8px; transition: transform 0.3s;
         }
-        .nav-panel.collapsed .toggle-panel-btn { transform: rotate(180deg);
-        }
+        .nav-panel.collapsed .toggle-panel-btn { transform: rotate(180deg); }
 
         .route-option {
-            background: #f8f9fa;
-            border: 2px solid #ddd; border-radius: 6px;
+            background: #f8f9fa; border: 2px solid #ddd; border-radius: 6px;
             padding: 8px; margin-top: 6px; cursor: pointer; transition: all 0.2s;
         }
-        .route-option.active { border-color: #007bff; background: #e6f2ff; font-weight: bold;
-        }
-        .route-meta { font-size: 11px; color: #666; margin-top: 2px;
-        }
-        .badge { display: inline-block; padding: 2px 5px; font-size: 10px; border-radius: 4px;
-            color: white; margin-left: 4px; }
-        .badge.danger { background: #ff4d4d;
-        }
-        .badge.warning { background: #ff9900;
-        }
-        .badge.success { background: #28a745;
-        }
+        .route-option.active { border-color: #007bff; background: #e6f2ff; font-weight: bold; }
+        .route-meta { font-size: 11px; color: #666; margin-top: 2px; }
+        .badge { display: inline-block; padding: 2px 5px; font-size: 10px; border-radius: 4px; color: white; margin-left: 4px; }
+        .badge.danger { background: #ff4d4d; }
+        .badge.warning { background: #ff9900; }
+        .badge.success { background: #28a745; }
 
         .control-panel {
-            position: fixed;
-            right: 15px; top: 50%; transform: translateY(-50%);
+            position: fixed; right: 15px; top: 50%; transform: translateY(-50%);
             z-index: 9999; display: flex; flex-direction: column; gap: 15px;
         }
         .action-btn {
-            width: 55px;
-            height: 55px; border-radius: 50%; border: none;
+            width: 55px; height: 55px; border-radius: 50%; border: none;
             background-color: rgba(0, 123, 255, 0.95); color: white; font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
         }
-        .action-btn:active { transform: scale(0.9);
-        }
-        .action-btn.ar-toggle-btn { background-color: #e533ff;
-        } 
-        .action-btn.secondary { background-color: rgba(40, 167, 69, 0.9);
-        }
+        .action-btn:active { transform: scale(0.9); }
+        .action-btn.ar-toggle-btn { background-color: #e533ff; } 
+        .action-btn.secondary { background-color: rgba(40, 167, 69, 0.9); }
 
         .legend {
-            position: absolute;
-            bottom: 15px; right: 15px; z-index: 30;
+            position: absolute; bottom: 15px; right: 15px; z-index: 30;
             background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px;
-            font-size: 11px; color: #333;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2); line-height: 1.4;
+            font-size: 11px; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.2); line-height: 1.4;
             max-width: 180px;
         }
-        .a-dialog-allow, .a-dialog-deny, .a-dialog-container { display: none !important;
-        }
-        .legend-item { display: flex; align-items: center; margin-bottom: 3px;
-        }
-        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; display: inline-block;
-        }
+        .a-dialog-allow, .a-dialog-deny, .a-dialog-container { display: none !important; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 3px; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; display: inline-block; }
 
         /* 左下角專屬無障礙坡道圖例樣式 */
         .left-legend {
-            position: absolute;
-            bottom: 35px; left: 15px; z-index: 9999;
+            position: absolute; bottom: 35px; left: 15px; z-index: 9999;
             background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px;
-            font-size: 12px; font-weight: bold; color: #333;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            font-size: 12px; font-weight: bold; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             pointer-events: auto;
         }
         
         /* 雲端通報點位的自訂樣式 */
         .cloud-marker {
-            width: 16px;
-            height: 16px; background-color: #ff4d4d;
+            width: 16px; height: 16px; background-color: #ff4d4d;
             border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);
             cursor: pointer;
         }
@@ -206,13 +177,15 @@
         <button class="action-btn ar-toggle-btn" id="toggle-view-btn" onclick="toggleViewMode()" title="開啟 AR 鏡頭">
             <i class="fa-solid fa-eye"></i>
         </button>
-        <button class="action-btn secondary" onclick="clearNavigation(); location.reload();" title="重整系統">
+        <button class="action-btn secondary" onclick="location.reload()" title="重整系統">
             <i class="fa-solid fa-rotate"></i>
         </button>
     </div>
 
     <div id="report-box" style="position: absolute; top: 220px; left: 10px; z-index: 999; background: white; padding: 12px; border-radius: 8px; color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; width: 220px; font-size: 13px;">
         <h4 style="margin: 0 0 8px 0; color: #ff4d4d; font-size: 14px;"><i class="fa-solid fa-triangle-exclamation"></i> 雲端即時通報</h4>
+        <!-- 優化項目：面板內新增操作說明文字 -->
+        <p style="font-size: 11px; margin: 0 0 4px 0; color: #28a745; font-weight: bold;"><i class="fa-solid fa-circle-info"></i> 提示：手機長按地圖/電腦右鍵可重選位置</p>
         <p style="font-size: 11px; margin: 0 0 6px 0;">座標：<span id="coord-display" style="color: #666;"></span></p>
         <select id="obstacle-type" style="width: 100%; margin: 5px 0 8px 0; padding: 5px; border-radius: 4px; border: 1px solid #ccc; font-size: 12px;">
             <option value="施工圍籬">🚧 施工圍籬</option>
@@ -239,9 +212,6 @@
         window.activeCloudMarkers = {};
         let selectedRouteId = 'G'; 
         let currentReportLngLat = null;
-        
-        // 對應 Unity 的 spawnedArrows，用於存放網頁生成的 AR 節點（錨點）
-        let spawnedArAnchors = [];
 
         // Mapbox Access Token
         mapboxgl.accessToken = 'pk.eyJ1IjoieWViaSIsImEiOiJjbXA1Nm1ham8waDNxMnlvbGRqbWJsbm1qIn0.qvKsHBXuKLCKn7gPausIjg'; 
@@ -335,6 +305,7 @@
             { id: "終點(研三舍)", lng: 120.99704, lat: 24.78390, type: "終點/安全抵達", slope: 12.28, routeId: "G", name: "綠色快捷無障礙線" }
         ];
 
+        // 38 個無障礙坡道座標資料
         const rampData = [
             { id: "坡道 1", lat: 24.78662, lng: 120.99619 },
             { id: "坡道 2", lat: 24.78962, lng: 120.99516 },
@@ -375,6 +346,7 @@
             { id: "坡道 37", lat: 24.78674, lng: 120.99709 },
             { id: "坡道 38", lat: 24.78698, lng: 120.99751 }
         ];
+
         const allRoutes = { 'P': routeP, 'O': routeO, 'B': routeB, 'G': routeG };
         const rawData = [...routeP, ...routeO, ...routeB, ...routeG];
 
@@ -392,6 +364,7 @@
             const container = document.getElementById('route-options-container');
             container.innerHTML = '';
             const sorted = [...routeEvaluations].sort((a, b) => b.score - a.score);
+            
             sorted.forEach(route => {
                 const isActive = route.id === selectedRouteId ? 'active' : '';
                 const html = `
@@ -404,12 +377,13 @@
                 `;
                 container.innerHTML += html;
             });
+
             const currentSelected = routeEvaluations.find(r => r.id === selectedRouteId);
             document.getElementById('nav-panel-title').innerText = `導航中: ${currentSelected.name.split(' (')[0]}`;
         }
 
         // ==========================================
-        // 全域功能函式 
+        // 全域功能函式
         // ==========================================
         function selectRoute(routeId) {
             selectedRouteId = routeId;
@@ -439,10 +413,18 @@
             }
         }
 
+        // 優化項目：處理通報視窗喚起的統一函式
+        function triggerReportBox(lngLat) {
+            currentReportLngLat = lngLat;
+            document.getElementById('coord-display').innerText = `${lngLat.lng.toFixed(5)}, ${lngLat.lat.toFixed(5)}`;
+            document.getElementById('report-box').style.display = 'block';
+        }
+
         function updateMapLayers() {
             if (!map.getLayer('highlight-line-layer')) return;
             map.setPaintProperty('highlight-line-layer', 'line-width', ['case', ['==', ['get', 'route'], selectedRouteId], 6, 1.5]);
             map.setPaintProperty('highlight-line-layer', 'line-opacity', ['case', ['==', ['get', 'route'], selectedRouteId], 1.0, 0.2]);
+            
             map.setPaintProperty('nodes-layer', 'circle-radius', ['case', ['==', ['get', 'routeId'], selectedRouteId], 8, 4]);
             map.setPaintProperty('nodes-layer', 'circle-opacity', ['case', ['==', ['get', 'routeId'], selectedRouteId], 1.0, 0.25]);
             map.setPaintProperty('nodes-layer', 'circle-stroke-opacity', ['case', ['==', ['get', 'routeId'], selectedRouteId], 1.0, 0.25]);
@@ -463,50 +445,18 @@
             }
         }
 
-        // 🟢 對應 Unity 的 ClearNavigation()：安全釋放與刪除所有生成的 AR 實體錨點
-        function clearNavigation() {
-            spawnedArAnchors.forEach(anchorEl => {
-                if (anchorEl && anchorEl.parentNode) {
-                    anchorEl.parentNode.removeChild(anchorEl);
-                }
-            });
-            spawnedArAnchors = [];
-        }
-
-        // 🛠️ 對應 Unity 的 DrawNavigationPath()：將座標點轉換為特定屬性顏色的虛擬錨點
         function injectArPoints() {
-            // 1. 先清除舊有 AR 錨點物件 (同 ClearNavigation)
-            clearNavigation();
-
             const container = document.getElementById('ar-points-container');
             if(!container) return;
-            
+            container.innerHTML = '';
             const currentRoute = allRoutes[selectedRouteId];
             if(currentRoute) {
                 currentRoute.forEach(pt => {
-                    // 2. 建立 A-Frame 虛擬世界中的物件實體（作為地理位置錨點）
-                    const anchorEl = document.createElement('a-entity');
-                    
-                    // 3. 設定地理世界固定的經緯度座標（等同在實體環境放置物件錨點）
-                    anchorEl.setAttribute('gps-entity-place', `latitude: ${pt.lat}; longitude: ${pt.lng}`);
-                    anchorEl.setAttribute('geometry', 'primitive: sphere; radius: 2');
-                    
-                    // 4. 動態計算顏色邏輯（依各點屬性指派對應顏色碼，與 Mapbox 完全一致）
-                    let pointColor = '#4dff4d'; // 預設平路為綠色
-                    if (pt.type === '連續階梯(危險)') {
-                        pointColor = '#ff4d4d'; // 階梯 / 危險 (紅)
-                    } else if (pt.slope > 8.33) {
-                        pointColor = '#ff9900'; // 陡坡 (橘)
-                    } else if (pt.slope > 0) {
-                        pointColor = '#ffff4d'; // 緩坡 (黃)
-                    }
- 
-                    // 5. 將屬性顏色賦予該錨點實體
-                    anchorEl.setAttribute('material', `color: ${pointColor}; shader: flat`); 
-                    
-                    // 6. 加入場景容器並記錄至追蹤清單（對應 spawnedArrows.Add）
-                    container.appendChild(anchorEl);
-                    spawnedArAnchors.push(anchorEl);
+                    const el = document.createElement('a-entity');
+                    el.setAttribute('gps-entity-place', `latitude: ${pt.lat}; longitude: ${pt.lng}`);
+                    el.setAttribute('geometry', 'primitive: sphere; radius: 2');
+                    el.setAttribute('material', 'color: red'); 
+                    container.appendChild(el);
                 });
             }
         }
@@ -522,6 +472,23 @@
         // 4. MAPBOX 圖層高亮與動態切換
         // ==========================================
         map.on('load', () => {
+            // 優化項目：網頁初始化時自動跳出漂浮引導 Toast (4秒後自動淡出)
+            const guideToast = document.createElement('div');
+            guideToast.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> <b>即時路況回報：</b>手機【長按地圖空白處】或電腦【點擊滑鼠右鍵】即可通報路況喔！';
+            guideToast.style.cssText = `
+                position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.85); color: white; padding: 10px 16px;
+                border-radius: 30px; font-size: 12px; z-index: 99999; text-align: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none;
+                transition: opacity 0.5s ease; width: 85%; max-width: 340px;
+            `;
+            document.body.appendChild(guideToast);
+            
+            setTimeout(() => {
+                guideToast.style.opacity = '0';
+                setTimeout(() => guideToast.remove(), 500);
+            }, 4000);
+
             renderRouteOptions();
 
             document.getElementById('nav-interface').classList.add('collapsed');
@@ -534,7 +501,9 @@
                 { 'type': 'Feature', 'properties': { 'route': 'G' }, 'geometry': { 'type': 'LineString', 'coordinates': routeG.map(i => [i.lng, i.lat]) } }
             ];
             map.addSource('base-line-source', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': featuresLine } });
+            
             map.addLayer({ 'id': 'base-line-layer', 'type': 'line', 'source': 'base-line-source', 'paint': { 'line-color': '#ccc', 'line-width': 2, 'line-dasharray': [2, 2] } });
+
             map.addLayer({
                 'id': 'highlight-line-layer', 'type': 'line', 'source': 'base-line-source',
                 'paint': {
@@ -548,11 +517,13 @@
                     'line-opacity': 1.0
                 }
             });
+
             const featuresPoints = rawData.map(item => ({
                 'type': 'Feature', 'geometry': { 'type': 'Point', 'coordinates': [item.lng, item.lat] },
                 'properties': { 'id': item.id, 'type': item.type, 'slope': item.slope, 'routeId': item.routeId }
             }));
             map.addSource('nodes-source', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': featuresPoints } });
+            
             map.addLayer({
                 'id': 'nodes-layer', 'type': 'circle', 'source': 'nodes-source',
                 'paint': {
@@ -569,7 +540,8 @@
                     'circle-stroke-opacity': 1.0
                 }
             });
-            
+
+            // 加入 38 個無障礙坡道的資料源與圖層
             map.addSource('ramp-source', {
                 'type': 'geojson',
                 'data': { 'type': 'FeatureCollection', 'features': rampData.map(item => ({
@@ -577,6 +549,7 @@
                     'properties': { 'id': item.id, 'type': '無障礙坡道' }
                 })) }
             });
+
             map.addLayer({
                 'id': 'ramp-layer', 
                 'type': 'circle', 
@@ -585,12 +558,14 @@
                     'circle-radius': 4,
                     'circle-color': '#4ea8de', 
                     'circle-stroke-width': 1.5,
-                    'circle-stroke-color': '#ffffff' 
+                    'stroke-color': '#ffffff' 
                 }
             });
+
             updateMapLayers();
             injectArPoints();
 
+            // 點擊圓點彈窗 (原本的節點)
             map.on('click', 'nodes-layer', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 const props = e.features[0].properties;
@@ -599,7 +574,8 @@
                 const popupContent = `<div style="padding: 3px; color:#333; font-size:12px;"><h4 style="margin: 0 0 4px 0; font-size: 13px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${rColor};"></span> ${props.id}</h4><b>現地狀況：</b>${props.type}<br><b>實測坡度：</b>${props.slope}%</div>`;
                 new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupContent).addTo(map);
             });
-            
+
+            // 點擊無障礙坡道彈出視窗
             map.on('click', 'ramp-layer', (e) => {
                 const props = e.features[0].properties;
                 new mapboxgl.Popup().setLngLat(e.features[0].geometry.coordinates.slice()).setHTML(`
@@ -608,7 +584,8 @@
                     </div>
                 `).addTo(map);
             });
-            
+
+            // 游標互動
             const interactiveLayers = ['nodes-layer', 'ramp-layer'];
             interactiveLayers.forEach(layer => {
                 map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
@@ -616,14 +593,37 @@
             });
 
             // ==========================================
-            // 5. 雲端通報相關功能
+            // 5. 雲端通報相關功能修復（已修正行動裝置相容性）
             // ==========================================
-            map.on('contextmenu', (e) => {
-                currentReportLngLat = e.lngLat;
-                document.getElementById('coord-display').innerText = `${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`;
-                document.getElementById('report-box').style.display = 'block';
-            });
+            let touchTimeout = null;
             
+            // [電腦端] 地圖右鍵喚起通報表單
+            map.on('contextmenu', (e) => {
+                triggerReportBox(e.lngLat);
+            });
+
+            // [行動裝置端] 自訂觸控長按（延時 800 毫秒）機制
+            map.on('touchstart', (e) => {
+                // 如果點擊到的是現有點位，先讓給現有點位觸發，不喚起新通報
+                const features = map.queryRenderedFeatures(e.point, { layers: ['nodes-layer', 'ramp-layer'] });
+                if (features.length > 0) return;
+
+                if (touchTimeout) clearTimeout(touchTimeout);
+
+                touchTimeout = setTimeout(() => {
+                    triggerReportBox(e.lngLat);
+                }, 800);
+            });
+
+            map.on('touchend', () => {
+                if (touchTimeout) clearTimeout(touchTimeout);
+            });
+
+            map.on('touchmove', () => {
+                if (touchTimeout) clearTimeout(touchTimeout);
+            });
+
+            // 送出通報
             document.getElementById('submit-report').onclick = () => {
                 if(!currentReportLngLat) return;
                 const type = document.getElementById('obstacle-type').value;
@@ -636,20 +636,25 @@
                 document.getElementById('report-box').style.display = 'none';
                 alert('通報已送出至雲端！');
             };
-            
+
+            // 取消通報
             document.getElementById('cancel-report').onclick = () => {
                 document.getElementById('report-box').style.display = 'none';
             };
 
+            // FIREBASE 雲端即時監聽器
             database.ref('cloudReports').on('value', (snapshot) => {
                 clearAllCloudMarkers(); 
                 const data = snapshot.val();
                 if (data) {
                     Object.keys(data).forEach((key) => {
                         const report = data[key];
+                        
+                        // 建立自訂的紅色警告標記
                         const el = document.createElement('div');
                         el.className = 'cloud-marker';
                         
+                        // 建立彈出視窗
                         const popup = new mapboxgl.Popup({ offset: 15 }).setHTML(`
                             <div style="font-size:12px; color:#333;">
                                 <strong style="color:#ff4d4d;">⚠️ 障礙通報</strong><br>
@@ -657,6 +662,7 @@
                             </div>
                         `);
                         
+                        // 加到地圖上
                         const marker = new mapboxgl.Marker(el)
                             .setLngLat([report.lng, report.lat])
                             .setPopup(popup)
@@ -667,7 +673,7 @@
                 }
             });
 
-        });
+        }); // map.on('load') 結束括號
     </script>
 </body>
 </html>
