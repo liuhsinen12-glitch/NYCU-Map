@@ -25,6 +25,10 @@
             width: 100%; height: 100%; position: absolute;
             top: 0; left: 0; z-index: 20; 
             transition: opacity 0.3s ease, visibility 0.3s;
+            /* 修正行動裝置防長按干擾 */
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none;   
+            user-select: none;           
         }
         
         .ar-mode #map { opacity: 0; visibility: hidden; pointer-events: none; } 
@@ -127,9 +131,9 @@
         <div class="legend" id="map-legend">
             <strong>📍 路線區分 (外框)</strong><br>
             <div class="legend-item"><span class="legend-color" style="border: 2px solid #e533ff; background:none;"></span> 路線 P (浩然步道)</div>
-            <div class="legend-item"><span class="legend-color" style="border: 2px solid #ffaa00; background:none;"></span> 路線 O (西側外環)</div>
-            <div class="legend-item"><span class="legend-color" style="border: 2px solid #3388ff; background:none;"></span> 路線 B (東側斜坡)</div>
-            <div class="legend-item"><span class="legend-color" style="border: 2px solid #28a745; background:none;"></span> 路線 G (綠色快捷)</div>
+            <div class="legend-item"><span class="legend-color" style="border: 2px solid #ffaa00; background:none;"></span> 路線 O (西側外環)</div>
+            <div class="legend-item"><span class="legend-color" style="border: 2px solid #3388ff; background:none;"></span> 路線 B (東側斜坡)</div>
+            <div class="legend-item"><span class="legend-color" style="border: 2px solid #28a745; background:none;"></span> 路線 G (綠色快捷)</div>
             <hr style="margin: 4px 0; border: none; border-top: 1px solid #eee;">
             <strong>⚠️ 坡度風險 (圓心)</strong><br>
             <div class="legend-item"><span class="legend-color" style="background: #ff4d4d;"></span> 階梯 / 危險</div>
@@ -180,6 +184,8 @@
 
     <div id="report-box" style="position: absolute; top: 220px; left: 10px; z-index: 999; background: white; padding: 12px; border-radius: 8px; color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; width: 220px; font-size: 13px;">
         <h4 style="margin: 0 0 8px 0; color: #ff4d4d; font-size: 14px;"><i class="fa-solid fa-triangle-exclamation"></i> 雲端即時通報</h4>
+        <!-- 優化項目：面板內新增操作說明文字 -->
+        <p style="font-size: 11px; margin: 0 0 4px 0; color: #28a745; font-weight: bold;"><i class="fa-solid fa-circle-info"></i> 提示：手機長按地圖/電腦右鍵可重選位置</p>
         <p style="font-size: 11px; margin: 0 0 6px 0;">座標：<span id="coord-display" style="color: #666;"></span></p>
         <select id="obstacle-type" style="width: 100%; margin: 5px 0 8px 0; padding: 5px; border-radius: 4px; border: 1px solid #ccc; font-size: 12px;">
             <option value="施工圍籬">🚧 施工圍籬</option>
@@ -365,6 +371,7 @@
                     <div class="route-option ${isActive}" onclick="selectRoute('${route.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span><strong>${route.name}</strong></span>
+                        </div>
                         <div class="route-meta">${route.desc}</div>
                     </div>
                 `;
@@ -376,7 +383,7 @@
         }
 
         // ==========================================
-        // 全域功能函式 (修復截斷與未定義錯誤)
+        // 全域功能函式
         // ==========================================
         function selectRoute(routeId) {
             selectedRouteId = routeId;
@@ -404,6 +411,13 @@
                 panel.classList.add('collapsed');
                 icon.className = "fa-solid fa-chevron-down";
             }
+        }
+
+        // 優化項目：處理通報視窗喚起的統一函式
+        function triggerReportBox(lngLat) {
+            currentReportLngLat = lngLat;
+            document.getElementById('coord-display').innerText = `${lngLat.lng.toFixed(5)}, ${lngLat.lat.toFixed(5)}`;
+            document.getElementById('report-box').style.display = 'block';
         }
 
         function updateMapLayers() {
@@ -458,6 +472,23 @@
         // 4. MAPBOX 圖層高亮與動態切換
         // ==========================================
         map.on('load', () => {
+            // 優化項目：網頁初始化時自動跳出漂浮引導 Toast (4秒後自動淡出)
+            const guideToast = document.createElement('div');
+            guideToast.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> <b>即時路況回報：</b>手機【長按地圖空白處】或電腦【點擊滑鼠右鍵】即可通報路況喔！';
+            guideToast.style.cssText = `
+                position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.85); color: white; padding: 10px 16px;
+                border-radius: 30px; font-size: 12px; z-index: 99999; text-align: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none;
+                transition: opacity 0.5s ease; width: 85%; max-width: 340px;
+            `;
+            document.body.appendChild(guideToast);
+            
+            setTimeout(() => {
+                guideToast.style.opacity = '0';
+                setTimeout(() => guideToast.remove(), 500);
+            }, 4000);
+
             renderRouteOptions();
 
             document.getElementById('nav-interface').classList.add('collapsed');
@@ -527,7 +558,7 @@
                     'circle-radius': 4,
                     'circle-color': '#4ea8de', 
                     'circle-stroke-width': 1.5,
-                    'circle-stroke-color': '#ffffff' 
+                    'stroke-color': '#ffffff' 
                 }
             });
 
@@ -545,7 +576,6 @@
             });
 
             // 點擊無障礙坡道彈出視窗
-         // 👇 修改後：點擊無障礙坡道彈出視窗 (已移除編號)
             map.on('click', 'ramp-layer', (e) => {
                 const props = e.features[0].properties;
                 new mapboxgl.Popup().setLngLat(e.features[0].geometry.coordinates.slice()).setHTML(`
@@ -563,14 +593,34 @@
             });
 
             // ==========================================
-            // 5. 雲端通報相關功能修復
+            // 5. 雲端通報相關功能修復（已修正行動裝置相容性）
             // ==========================================
+            let touchTimeout = null;
             
-            // 地圖長按/右鍵喚起通報表單
+            // [電腦端] 地圖右鍵喚起通報表單
             map.on('contextmenu', (e) => {
-                currentReportLngLat = e.lngLat;
-                document.getElementById('coord-display').innerText = `${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`;
-                document.getElementById('report-box').style.display = 'block';
+                triggerReportBox(e.lngLat);
+            });
+
+            // [行動裝置端] 自訂觸控長按（延時 800 毫秒）機制
+            map.on('touchstart', (e) => {
+                // 如果點擊到的是現有點位，先讓給現有點位觸發，不喚起新通報
+                const features = map.queryRenderedFeatures(e.point, { layers: ['nodes-layer', 'ramp-layer'] });
+                if (features.length > 0) return;
+
+                if (touchTimeout) clearTimeout(touchTimeout);
+
+                touchTimeout = setTimeout(() => {
+                    triggerReportBox(e.lngLat);
+                }, 800);
+            });
+
+            map.on('touchend', () => {
+                if (touchTimeout) clearTimeout(touchTimeout);
+            });
+
+            map.on('touchmove', () => {
+                if (touchTimeout) clearTimeout(touchTimeout);
             });
 
             // 送出通報
@@ -592,7 +642,7 @@
                 document.getElementById('report-box').style.display = 'none';
             };
 
-            // FIREBASE 雲端即時監聽器 (修復截斷部分)
+            // FIREBASE 雲端即時監聽器
             database.ref('cloudReports').on('value', (snapshot) => {
                 clearAllCloudMarkers(); 
                 const data = snapshot.val();
