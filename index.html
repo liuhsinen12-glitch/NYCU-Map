@@ -206,7 +206,7 @@
         <button class="action-btn ar-toggle-btn" id="toggle-view-btn" onclick="toggleViewMode()" title="開啟 AR 鏡頭">
             <i class="fa-solid fa-eye"></i>
         </button>
-        <button class="action-btn secondary" onclick="location.reload()" title="重整系統">
+        <button class="action-btn secondary" onclick="clearNavigation(); location.reload();" title="重整系統">
             <i class="fa-solid fa-rotate"></i>
         </button>
     </div>
@@ -239,6 +239,9 @@
         window.activeCloudMarkers = {};
         let selectedRouteId = 'G'; 
         let currentReportLngLat = null;
+        
+        // 對應 Unity 的 spawnedArrows，用於存放網頁生成的 AR 節點（錨點）
+        let spawnedArAnchors = [];
 
         // Mapbox Access Token
         mapboxgl.accessToken = 'pk.eyJ1IjoieWViaSIsImEiOiJjbXA1Nm1ham8waDNxMnlvbGRqbWJsbm1qIn0.qvKsHBXuKLCKn7gPausIjg'; 
@@ -332,7 +335,6 @@
             { id: "終點(研三舍)", lng: 120.99704, lat: 24.78390, type: "終點/安全抵達", slope: 12.28, routeId: "G", name: "綠色快捷無障礙線" }
         ];
 
-        // 38 個無障礙坡道座標資料
         const rampData = [
             { id: "坡道 1", lat: 24.78662, lng: 120.99619 },
             { id: "坡道 2", lat: 24.78962, lng: 120.99516 },
@@ -407,7 +409,7 @@
         }
 
         // ==========================================
-        // 全域功能函式 (修復截斷與未定義錯誤)
+        // 全域功能函式 
         // ==========================================
         function selectRoute(routeId) {
             selectedRouteId = routeId;
@@ -461,18 +463,35 @@
             }
         }
 
+        // 🟢 對應 Unity 的 ClearNavigation()：安全釋放與刪除所有生成的 AR 實體錨點
+        function clearNavigation() {
+            spawnedArAnchors.forEach(anchorEl => {
+                if (anchorEl && anchorEl.parentNode) {
+                    anchorEl.parentNode.removeChild(anchorEl);
+                }
+            });
+            spawnedArAnchors = [];
+        }
+
+        // 🛠️ 對應 Unity 的 DrawNavigationPath()：將座標點轉換為特定屬性顏色的虛擬錨點
         function injectArPoints() {
+            // 1. 先清除舊有 AR 錨點物件 (同 ClearNavigation)
+            clearNavigation();
+
             const container = document.getElementById('ar-points-container');
             if(!container) return;
-            container.innerHTML = '';
+            
             const currentRoute = allRoutes[selectedRouteId];
             if(currentRoute) {
                 currentRoute.forEach(pt => {
-                    const el = document.createElement('a-entity');
-                    el.setAttribute('gps-entity-place', `latitude: ${pt.lat}; longitude: ${pt.lng}`);
-                    el.setAttribute('geometry', 'primitive: sphere; radius: 2');
+                    // 2. 建立 A-Frame 虛擬世界中的物件實體（作為地理位置錨點）
+                    const anchorEl = document.createElement('a-entity');
                     
-                    // 💡 動態判斷點位顏色（與地圖 nodes-layer 邏輯完全同步）
+                    // 3. 設定地理世界固定的經緯度座標（等同在實體環境放置物件錨點）
+                    anchorEl.setAttribute('gps-entity-place', `latitude: ${pt.lat}; longitude: ${pt.lng}`);
+                    anchorEl.setAttribute('geometry', 'primitive: sphere; radius: 2');
+                    
+                    // 4. 動態計算顏色邏輯（依各點屬性指派對應顏色碼，與 Mapbox 完全一致）
                     let pointColor = '#4dff4d'; // 預設平路為綠色
                     if (pt.type === '連續階梯(危險)') {
                         pointColor = '#ff4d4d'; // 階梯 / 危險 (紅)
@@ -482,8 +501,12 @@
                         pointColor = '#ffff4d'; // 緩坡 (黃)
                     }
  
-                    el.setAttribute('material', `color: ${pointColor}`); 
-                    container.appendChild(el);
+                    // 5. 將屬性顏色賦予該錨點實體
+                    anchorEl.setAttribute('material', `color: ${pointColor}; shader: flat`); 
+                    
+                    // 6. 加入場景容器並記錄至追蹤清單（對應 spawnedArrows.Add）
+                    container.appendChild(anchorEl);
+                    spawnedArAnchors.push(anchorEl);
                 });
             }
         }
@@ -546,7 +569,7 @@
                     'circle-stroke-opacity': 1.0
                 }
             });
-            // 加入 38 個無障礙坡道的資料源與圖層
+            
             map.addSource('ramp-source', {
                 'type': 'geojson',
                 'data': { 'type': 'FeatureCollection', 'features': rampData.map(item => ({
@@ -568,7 +591,6 @@
             updateMapLayers();
             injectArPoints();
 
-            // 點擊圓點彈窗 (原本的節點)
             map.on('click', 'nodes-layer', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 const props = e.features[0].properties;
@@ -577,7 +599,7 @@
                 const popupContent = `<div style="padding: 3px; color:#333; font-size:12px;"><h4 style="margin: 0 0 4px 0; font-size: 13px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${rColor};"></span> ${props.id}</h4><b>現地狀況：</b>${props.type}<br><b>實測坡度：</b>${props.slope}%</div>`;
                 new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupContent).addTo(map);
             });
-            // 👇 修改後：點擊無障礙坡道彈出視窗 (已移除編號)
+            
             map.on('click', 'ramp-layer', (e) => {
                 const props = e.features[0].properties;
                 new mapboxgl.Popup().setLngLat(e.features[0].geometry.coordinates.slice()).setHTML(`
@@ -586,23 +608,22 @@
                     </div>
                 `).addTo(map);
             });
-            // 游標互動
+            
             const interactiveLayers = ['nodes-layer', 'ramp-layer'];
             interactiveLayers.forEach(layer => {
                 map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
                 map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
             });
+
             // ==========================================
-            // 5. 雲端通報相關功能修復
+            // 5. 雲端通報相關功能
             // ==========================================
-            
-            // 地圖長按/右鍵喚起通報表單
             map.on('contextmenu', (e) => {
                 currentReportLngLat = e.lngLat;
                 document.getElementById('coord-display').innerText = `${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`;
                 document.getElementById('report-box').style.display = 'block';
             });
-            // 送出通報
+            
             document.getElementById('submit-report').onclick = () => {
                 if(!currentReportLngLat) return;
                 const type = document.getElementById('obstacle-type').value;
@@ -615,24 +636,20 @@
                 document.getElementById('report-box').style.display = 'none';
                 alert('通報已送出至雲端！');
             };
-            // 取消通報
+            
             document.getElementById('cancel-report').onclick = () => {
                 document.getElementById('report-box').style.display = 'none';
             };
 
-            // FIREBASE 雲端即時監聽器 (修復截斷部分)
             database.ref('cloudReports').on('value', (snapshot) => {
                 clearAllCloudMarkers(); 
                 const data = snapshot.val();
                 if (data) {
                     Object.keys(data).forEach((key) => {
                         const report = data[key];
-                        
-                        // 建立自訂的紅色警告標記
                         const el = document.createElement('div');
                         el.className = 'cloud-marker';
                         
-                        // 建立彈出視窗
                         const popup = new mapboxgl.Popup({ offset: 15 }).setHTML(`
                             <div style="font-size:12px; color:#333;">
                                 <strong style="color:#ff4d4d;">⚠️ 障礙通報</strong><br>
@@ -640,7 +657,6 @@
                             </div>
                         `);
                         
-                        // 加到地圖上
                         const marker = new mapboxgl.Marker(el)
                             .setLngLat([report.lng, report.lat])
                             .setPopup(popup)
@@ -652,7 +668,6 @@
             });
 
         });
-        // map.on('load') 結束括號
     </script>
 </body>
 </html>
