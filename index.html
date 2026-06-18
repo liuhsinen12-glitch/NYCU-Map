@@ -471,7 +471,7 @@
         }
 
         // ==========================================
-        // 5. AR 實景優化：動態過濾、中文顯示與地面三維路徑線
+        // 5. AR 實景優化：動態過濾與地面三維路徑線 (已完全拿掉文字描述)
         // ==========================================
         const sceneEl = document.querySelector('a-scene');
         
@@ -479,34 +479,13 @@
             const arContainer = document.getElementById('ar-points-container');
             arContainer.innerHTML = ''; // 徹底清除上一次的舊實體
 
-            // 只抓取當前在 UI 上選中的那一條路線數據，避免畫面擠爆
+            // 只抓取當前在 UI 上選中的那一條路線數據
             const targetRouteData = allRoutes[selectedRouteId];
             if (!targetRouteData) return;
 
-            targetRouteData.forEach((point, index) => {
-                const textEntity = document.createElement('a-text');
-                
-                // 動態組裝全中文資訊
-                let infoText = `[${point.name}]\n位置: ${point.id}\n特徵: ${point.type}\n坡度: ${point.slope}%`;
-                
-                // 設定 A-Frame A-Text 屬性
-                textEntity.setAttribute('value', infoText);
-                textEntity.setAttribute('gps-entity-place', `latitude: ${point.lat}; longitude: ${point.lng};`);
-                textEntity.setAttribute('scale', '18 18 18'); // 放大使其在戶外更清晰
-                textEntity.setAttribute('look-at', '[gps-camera]');
-                textEntity.setAttribute('position', '0 5 0'); // 抬高標籤，使視野更寬廣開闊
-                textEntity.setAttribute('align', 'center');
+            // 【已移除文字標籤生成邏輯，使畫面上完全不顯示中文字】
 
-                // 顏色防呆匹配
-                if (point.type.includes('危險') || point.type.includes('階梯')) textEntity.setAttribute('color', '#ff4d4d');
-                else if (point.slope > 8.33) textEntity.setAttribute('color', '#ff9900');
-                else if (point.slope > 0) textEntity.setAttribute('color', '#ffff4d');
-                else textEntity.setAttribute('color', '#4dff4d');
-
-                arContainer.appendChild(textEntity);
-            });
-
-            // 動態在 AR 螢幕實景中佈署地面導航引導圓盤 (Cylinder 圓柱體體現)
+            // 動態在 AR 螢幕實景中佈署地面導航引導圓盤
             for (let i = 0; i < targetRouteData.length - 1; i++) {
                 const ptA = targetRouteData[i];
                 const ptB = targetRouteData[i+1];
