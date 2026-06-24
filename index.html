@@ -156,6 +156,31 @@
         }
         .admin-action-btn.approve { background: #28a745; }
         .admin-action-btn.delete { background: #ff4d4d; }
+
+        /* 左下角（坡道圖例上方）操作提示框樣式 */
+        .report-hint-box {
+            position: absolute;
+            bottom: 75px; /* 推高以避開左下角 35px 高度的坡道圖例 */
+            left: 15px;
+            z-index: 9999;
+            background: rgba(0, 123, 255, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            pointer-events: none; /* 點擊穿透，防止阻擋地圖底層的操作 */
+            animation: hint-glow 2s infinite ease-in-out;
+            max-width: 180px;
+            line-height: 1.4;
+        }
+        @keyframes hint-glow {
+            0% { box-shadow: 0 2px 10px rgba(0, 123, 255, 0.4); }
+            50% { box-shadow: 0 2px 15px rgba(0, 123, 255, 0.8); }
+            100% { box-shadow: 0 2px 10px rgba(0, 123, 255, 0.4); }
+        }
+        /* 當進入 AR 模式時，自動隱藏提示框 */
+        .ar-mode .report-hint-box { display: none; }
     </style>
 </head>
 <body class="map-mode"> 
@@ -173,6 +198,12 @@
             <div class="legend-item"><span class="legend-color" style="background: #ff9900;"></span> 陡坡 (&gt;8.33%)</div>
             <div class="legend-item"><span class="legend-color" style="background: #ffff4d;"></span> 緩坡 / 安全</div>
         </div>
+    </div>
+
+    <div class="report-hint-box">
+        <i class="fa-solid fa-circle-info" style="margin-right: 3px;"></i> 
+        <strong>路況回報提示：</strong><br>
+        在校園地圖上<strong>任意點擊</strong>或<strong>長按點位</strong>，即可抓取位置進行即時路況通報！
     </div>
 
     <div class="left-legend">
@@ -251,9 +282,9 @@
         window.activeCloudMarkers = {};
         let selectedRouteId = 'G'; 
         let currentReportLngLat = null;
-        let tempMarker = null; // 抓取點位用的暫存標記
-        let isAdminLoggedIn = false; // 管理員登入狀態
-        let currentFirebaseDataCache = null; // 後台更新緩存
+        let tempMarker = null; 
+        let isAdminLoggedIn = false; 
+        let currentFirebaseDataCache = null; 
 
         // Mapbox Access Token
         mapboxgl.accessToken = 'pk.eyJ1IjoieWViaSIsImEiOiJjbXA1Nm1ham8waDNxMnlvbGRqbWJsbm1qIn0.qvKsHBXuKLCKn7gPausIjg'; 
@@ -374,7 +405,6 @@
         // 3. 地圖與圖層初始化
         // ==========================================
         map.on('load', () => {
-            // 填入無障礙坡道點位
             rampData.forEach((ramp) => {
                 new mapboxgl.Marker({ color: '#4ea8de' })
                     .setLngLat([ramp.lng, ramp.lat])
@@ -382,7 +412,6 @@
                     .addTo(map);
             });
 
-            // 繪製推薦路線線段
             const routesGeoJSON = {
                 'type': 'FeatureCollection',
                 'features': [
@@ -403,7 +432,6 @@
                 }
             });
 
-            // 繪製路網節點
             const featuresPoints = allRoutesData.map(item => ({
                 'type': 'Feature', 'geometry': { 'type': 'Point', 'coordinates': [item.lng, item.lat] },
                 'properties': { 'id': item.id, 'type': item.type, 'slope': item.slope, 'routeId': item.routeId }
@@ -420,19 +448,15 @@
                 }
             });
 
-            // 功能 1：點擊地圖抓取位置並產生「即時路況動態暫存標記」
             map.on('click', (e) => {
                 if (document.body.classList.contains('ar-mode')) return;
                 currentReportLngLat = e.lngLat;
                 
-                // 更新回報視窗座標並打開它
                 document.getElementById('coord-display').innerText = `${currentReportLngLat.lng.toFixed(5)}, ${currentReportLngLat.lat.toFixed(5)}`;
                 document.getElementById('report-box').style.display = 'block';
 
-                // 移除上一個未提交的暫存標記（如果有）
                 if (tempMarker) tempMarker.remove();
 
-                // 在地圖選取點建立帶有呼吸波紋動畫的藍色圖示
                 const el = document.createElement('div');
                 el.className = 'temp-report-marker';
                 tempMarker = new mapboxgl.Marker(el)
@@ -443,11 +467,10 @@
             selectRoute('G');
             renderPanelOptions();
 
-            // FIREBASE 雲端即時動態數據監聽器 (功能 2：區分待審核與核准狀態)
             database.ref('cloudReports').on('value', (snapshot) => {
                 clearAllCloudMarkers(); 
                 const data = snapshot.val();
-                currentFirebaseDataCache = data; // 寫入緩存供管理員面板使用
+                currentFirebaseDataCache = data; 
                 
                 if (data) {
                     Object.keys(data).forEach((key) => {
@@ -455,7 +478,6 @@
                         const el = document.createElement('div');
                         
                         let statusText = "";
-                        // 判斷狀態：若為 approved 顯示紅色警告，其餘（包含 pending）皆顯示虛點待審
                         if (report.status === 'approved') {
                             el.className = 'cloud-marker approved';
                             statusText = `<span style="color:#ff4d4d; font-weight:bold;">🔴 已核准上線</span>`;
@@ -464,7 +486,6 @@
                             statusText = `<span style="color:#fca311; font-weight:bold;">🟡 待審核虛點</span>`;
                         }
                         
-                        // 地圖圖點彈出式視窗內建管理審查功能
                         let popupHTML = `
                             <div style="font-size:12px; color:#333; line-height:1.5; min-width:150px;">
                                 <strong style="font-size:13px; color:#0056b3;">⚠️ 即時路況資訊</strong><br>
@@ -474,11 +495,9 @@
                                 <div style="display:flex; gap:5px; margin-top:4px;">
                         `;
 
-                        // 如果此點未通過審核，顯示「核准」按鈕（此處點擊會檢查管理登入狀態或密碼）
                         if (report.status !== 'approved') {
                             popupHTML += `<button onclick="directApprove('${key}')" style="background:#28a745; color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; font-size:10px;">核准</button>`;
                         }
-                        // 任何點位管理員皆可隨時取消刪除
                         popupHTML += `<button onclick="directDelete('${key}')" style="background:#ff4d4d; color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; font-size:10px;">取消問題</button>`;
                         popupHTML += `</div></div>`;
 
@@ -492,7 +511,6 @@
                         window.activeCloudMarkers[key] = marker;
                     });
                 }
-                // 同步更新管理員右側控制面板
                 if (isAdminLoggedIn) { refreshAdminList(data); }
             });
         });
@@ -599,7 +617,7 @@
         }
 
         // ==========================================
-        // 6. 回報視窗互動事件（功能 2：預設塞入 pending 狀態）
+        // 6. 回報視窗互動事件
         // ==========================================
         document.getElementById('cancel-report').onclick = () => {
             document.getElementById('report-box').style.display = 'none';
@@ -610,7 +628,6 @@
             if (!currentReportLngLat) return;
             const type = document.getElementById('obstacle-type').value;
             
-            // 預設 status 填入 'pending' 轉為待審核虛點
             database.ref('cloudReports').push({
                 type: type,
                 lng: currentReportLngLat.lng,
@@ -641,7 +658,6 @@
             }
         }
 
-        // 地圖 Popup 直通核准與取消控制
         window.directApprove = function(key) {
             if (!checkAdminAuth()) return;
             if (confirm("確定要核准此項目，讓它在地圖上變為紅色警示點嗎？")) {
