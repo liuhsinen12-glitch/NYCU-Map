@@ -25,10 +25,6 @@
             width: 100%; height: 100%; position: absolute;
             top: 0; left: 0; z-index: 20; 
             transition: opacity 0.3s ease, visibility 0.3s;
-            /* 修正行動裝置防長按干擾 */
-            -webkit-touch-callout: none; 
-            -webkit-user-select: none;   
-            user-select: none;           
         }
         
         .ar-mode #map { opacity: 0; visibility: hidden; pointer-events: none; } 
@@ -49,27 +45,25 @@
         
         /* 導航與舒適度評分面板 */
         .nav-panel {
-            position: absolute; top: 10px; left: 10px; right: 80px;
+            position: absolute;
+            top: 10px; left: 10px; right: 80px;
             z-index: 999; background: rgba(255, 255, 255, 0.95);
-            padding: 12px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 12px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             font-size: 13px; color: #333; max-height: 45vh; overflow-y: auto;
             transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
         
-        /* 面板縮小/折疊時的樣式 */
         .nav-panel.collapsed {
-            max-height: 38px;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.85);
-            padding-bottom: 0;
+            max-height: 38px; overflow: hidden;
+            background: rgba(255, 255, 255, 0.85); padding-bottom: 0;
         }
 
         .nav-header { 
-            font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; color: #007bff; 
+            font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; color: #007bff;
         }
         .nav-title-box { display: flex; align-items: center; gap: 5px; }
         
-        /* 展開與折疊的按鈕 */
         .toggle-panel-btn {
             background: none; border: none; color: #007bff; font-size: 16px; cursor: pointer; padding: 2px 8px; transition: transform 0.3s;
         }
@@ -99,6 +93,7 @@
         .action-btn:active { transform: scale(0.9); }
         .action-btn.ar-toggle-btn { background-color: #e533ff; } 
         .action-btn.secondary { background-color: rgba(40, 167, 69, 0.9); }
+        .action-btn.admin-btn { background-color: #333; }
 
         .legend {
             position: absolute; bottom: 15px; right: 15px; z-index: 30;
@@ -110,20 +105,57 @@
         .legend-item { display: flex; align-items: center; margin-bottom: 3px; }
         .legend-color { width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; display: inline-block; }
 
-        /* 左下角專屬無障礙坡道圖例樣式 */
         .left-legend {
             position: absolute; bottom: 35px; left: 15px; z-index: 9999;
             background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px;
             font-size: 12px; font-weight: bold; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             pointer-events: auto;
         }
+
+        /* 1. 抓取點位時的即時路況動態標記 */
+        .temp-report-marker {
+            width: 20px; height: 20px; background-color: #007bff;
+            border: 3px solid white; border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.8);
+            animation: pulse-animation 1.5s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(0.9); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.6; }
+            100% { transform: scale(0.9); opacity: 1; }
+        }
         
-        /* 雲端通報點位的自訂樣式 */
-        .cloud-marker {
+        /* 2. 雲端已核准通報點（紅色警示） */
+        .cloud-marker.approved {
             width: 16px; height: 16px; background-color: #ff4d4d;
-            border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5);
             cursor: pointer;
         }
+
+        /* 3. 雲端待審核通報點（虛點待審） */
+        .cloud-marker.pending {
+            width: 16px; height: 16px; background-color: #fca311;
+            border: 2px dashed #444; border-radius: 50%; opacity: 0.75;
+            box-shadow: 0 0 4px rgba(0,0,0,0.3); cursor: pointer;
+        }
+
+        /* 管理員後台面板樣式 */
+        .admin-panel {
+            position: absolute; top: 60px; right: 80px; width: 290px; max-height: 60vh;
+            background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10000; padding: 12px; font-size: 13px; display: none; overflow-y: auto;
+        }
+        .admin-report-item {
+            padding: 8px 4px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 4px;
+        }
+        .admin-btn-group {
+            display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;
+        }
+        .admin-action-btn {
+            color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;
+        }
+        .admin-action-btn.approve { background: #28a745; }
+        .admin-action-btn.delete { background: #ff4d4d; }
     </style>
 </head>
 <body class="map-mode"> 
@@ -135,11 +167,11 @@
             <div class="legend-item"><span class="legend-color" style="border: 2px solid #3388ff; background:none;"></span> 路線 B (東側斜坡)</div>
             <div class="legend-item"><span class="legend-color" style="border: 2px solid #28a745; background:none;"></span> 路線 G (綠色快捷)</div>
             <hr style="margin: 4px 0; border: none; border-top: 1px solid #eee;">
-            <strong>⚠️ 坡度風險 (圓心)</strong><br>
-            <div class="legend-item"><span class="legend-color" style="background: #ff4d4d;"></span> 階梯 / 危險</div>
+            <strong>⚠️ 坡度及審核狀態</strong><br>
+            <div class="legend-item"><span class="legend-color" style="background: #ff4d4d;"></span> 🔴 已審核紅色警示</div>
+            <div class="legend-item"><span class="legend-color" style="background: #fca311; border: 1px dashed #444;"></span> 🟡 待審核虛點路況</div>
             <div class="legend-item"><span class="legend-color" style="background: #ff9900;"></span> 陡坡 (&gt;8.33%)</div>
             <div class="legend-item"><span class="legend-color" style="background: #ffff4d;"></span> 緩坡 / 安全</div>
-            <div class="legend-item"><span class="legend-color" style="background: #4dff4d;"></span> 平路 (0%)</div>
         </div>
     </div>
 
@@ -153,7 +185,7 @@
         <div class="nav-header">
             <div class="nav-title-box">
                 <i class="fa-solid fa-location-arrow"></i> 
-                <span id="nav-panel-title">校園無障礙導航 (已縮小)</span>
+                <span id="nav-panel-title">校園無障礙導航</span>
             </div>
             <button class="toggle-panel-btn" onclick="togglePanel(event)" title="展開/縮小面板">
                 <i class="fa-solid fa-chevron-up"></i>
@@ -168,6 +200,12 @@
         </div>
     </div>
 
+    <div class="admin-panel" id="admin-panel">
+        <h3 style="margin: 0 0 8px 0; color: #333; font-size: 14px; border-bottom: 2px solid #333; padding-bottom: 4px;">⚙️ 管理員主控台 (密碼:1234)</h3>
+        <div id="admin-list-container">載入通報數據中...</div>
+        <button onclick="closeAdminPanel()" style="width:100%; margin-top:8px; padding:6px; background:#666; color:white; border:none; border-radius:4px; cursor:pointer;">關閉後台</button>
+    </div>
+
     <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoConstraints: { facingMode: 'environment' }; facingMode: environment; debugUIEnabled: false;">
         <a-camera gps-camera rotation-reader></a-camera>
         <a-entity id="ar-points-container"></a-entity>
@@ -180,13 +218,14 @@
         <button class="action-btn secondary" onclick="location.reload()" title="重整系統">
             <i class="fa-solid fa-rotate"></i>
         </button>
+        <button class="action-btn admin-btn" onclick="openAdminPanel()" title="管理員後台">
+            <i class="fa-solid fa-gear"></i>
+        </button>
     </div>
 
     <div id="report-box" style="position: absolute; top: 220px; left: 10px; z-index: 999; background: white; padding: 12px; border-radius: 8px; color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; width: 220px; font-size: 13px;">
-        <h4 style="margin: 0 0 8px 0; color: #ff4d4d; font-size: 14px;"><i class="fa-solid fa-triangle-exclamation"></i> 雲端即時通報</h4>
-        <!-- 優化項目：面板內新增操作說明文字 -->
-        <p style="font-size: 11px; margin: 0 0 4px 0; color: #28a745; font-weight: bold;"><i class="fa-solid fa-circle-info"></i> 提示：手機長按地圖/電腦右鍵可重選位置</p>
-        <p style="font-size: 11px; margin: 0 0 6px 0;">座標：<span id="coord-display" style="color: #666;"></span></p>
+        <h4 style="margin: 0 0 8px 0; color: #007bff; font-size: 14px;"><i class="fa-solid fa-map-pin"></i> 抓取點位即時回報</h4>
+        <p style="font-size: 11px; margin: 0 0 6px 0;">已選座標：<span id="coord-display" style="color: #28a745; font-weight:bold;"></span></p>
         <select id="obstacle-type" style="width: 100%; margin: 5px 0 8px 0; padding: 5px; border-radius: 4px; border: 1px solid #ccc; font-size: 12px;">
             <option value="施工圍籬">🚧 施工圍籬</option>
             <option value="違停機車/車輛">🛵 違停機車/車輛</option>
@@ -194,7 +233,7 @@
             <option value="電梯/鐵捲門故障">❌ 電梯/設施故障</option>
         </select>
         <div style="display: flex; gap: 8px;">
-            <button id="submit-report" style="flex: 1; background: #ff4d4d; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">提交雲端</button>
+            <button id="submit-report" style="flex: 1; background: #007bff; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">提交審核</button>
             <button id="cancel-report" style="flex: 1; background: #999; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">取消</button>
         </div>
     </div>
@@ -212,6 +251,9 @@
         window.activeCloudMarkers = {};
         let selectedRouteId = 'G'; 
         let currentReportLngLat = null;
+        let tempMarker = null; // 抓取點位用的暫存標記
+        let isAdminLoggedIn = false; // 管理員登入狀態
+        let currentFirebaseDataCache = null; // 後台更新緩存
 
         // Mapbox Access Token
         mapboxgl.accessToken = 'pk.eyJ1IjoieWViaSIsImEiOiJjbXA1Nm1ham8waDNxMnlvbGRqbWJsbm1qIn0.qvKsHBXuKLCKn7gPausIjg'; 
@@ -233,79 +275,81 @@
         map.on('load', () => { geolocate.trigger(); });
 
         // ==========================================
-        // 2. 路線數據中文化與定義
+        // 2. 基礎校園路網數據
         // ==========================================
         const routeP = [
-            { id: "起點(工程二館)", lng: 120.99743, lat: 24.78846, type: "起點", slope: 0, routeId: "P", name: "浩然步道" },
-            { id: "節點P01", lng: 120.99752, lat: 24.78847, type: "轉彎處", slope: 0, routeId: "P", name: "浩然步道" },
-            { id: "節點P02", lng: 120.9971,  lat: 24.78857, type: "陡斜坡", slope: 17.63, routeId: "P", name: "浩然步道" },
-            { id: "節點P03", lng: 120.99722, lat: 24.78835, type: "緩斜坡", slope: 6.99, routeId: "P", name: "浩然步道" },
-            { id: "節點P04", lng: 120.99728, lat: 24.78746, type: "轉彎處", slope: 0, routeId: "P", name: "浩然步道" },
-            { id: "節點P05", lng: 120.99706, lat: 24.7874,  type: "陡斜坡", slope: 8.75, routeId: "P", name: "浩然步道" },
-            { id: "節點P06", lng: 120.99704, lat: 24.78727, type: "緩斜坡", slope: 3.49, routeId: "P", name: "浩然步道" },
-            { id: "節點P07", lng: 120.99703, lat: 24.78657, type: "緩斜坡", slope: 6.99, routeId: "P", name: "浩然步道" },
-            { id: "節點P08", lng: 120.99706, lat: 24.78634, type: "緩斜坡", slope: 6.99, routeId: "P", name: "浩然步道" },
-            { id: "節點P09", lng: 120.99701, lat: 24.78597, type: "陡斜坡", slope: 8.75, routeId: "P", name: "浩然步道" },
-            { id: "節點P10", lng: 120.997,   lat: 24.78587, type: "連續階梯(危險)", slope: 0, routeId: "P", name: "浩然步道" },
-            { id: "節點P11", lng: 120.99702, lat: 24.78574, type: "連續階梯(危險)", slope: 0, routeId: "P", name: "浩然步道" },
-            { id: "節點P12", lng: 120.99697, lat: 24.78546, type: "陡斜坡", slope: 10.51, routeId: "P", name: "浩然步道" },
-            { id: "節點P13", lng: 120.99685, lat: 24.78538, type: "緩斜坡", slope: 6.99, routeId: "P", name: "浩然步道" },
-            { id: "節點P14", lng: 120.99672, lat: 24.78415, type: "陡斜坡", slope: 10.51, routeId: "P", name: "浩然步道" },
-            { id: "終點(研三舍)",   lng: 120.99671, lat: 24.78403, type: "終點/斜坡", slope: 10.51, routeId: "P", name: "浩然步道" }
-        ];
-        const routeO = [
-            { id: "起點(工程二館)", lng: 120.99756, lat: 24.78850, type: "起點", slope: 0, routeId: "O", name: "西側外環線" },
-            { id: "節點O1", lng: 120.99759, lat: 24.78853, type: "轉彎處", slope: 0, routeId: "O", name: "西側外環線" },
-            { id: "節點O2", lng: 120.99710, lat: 24.78853, type: "極陡斜坡", slope: 21.26, routeId: "O", name: "西側外環線" },
-            { id: "節點O3", lng: 120.99717, lat: 24.78829, type: "轉彎處", slope: 0, routeId: "O", name: "西側外環線" },
-            { id: "節點O4", lng: 120.99595, lat: 24.78837, type: "無障礙坡道", slope: 8.75, routeId: "O", name: "西側外環線" },
-            { id: "節點O5", lng: 120.99601, lat: 24.78831, type: "轉彎處", slope: 0, routeId: "O", name: "西側外環線" },
-            { id: "節點O7", lng: 120.99592, lat: 24.78830, type: "轉彎處", slope: 0, routeId: "O", name: "西側外環線" },
-            { id: "節點O8", lng: 120.99596, lat: 24.78787, type: "轉彎處", slope: 0, routeId: "O", name: "西側外環線" },
-            { id: "節點O10", lng: 120.99556, lat: 24.78788, type: "無障礙坡道", slope: 6.99, routeId: "O", name: "西側外環線" },
-            { id: "節點O11", lng: 120.99538, lat: 24.78764, type: "陡斜坡", slope: 12.28, routeId: "O", name: "西側外環線" },
-            { id: "節點O12", lng: 120.99540, lat: 24.78724, type: "路面不平整", slope: 0, routeId: "O", name: "西側外環線" },
-            { id: "節點O13", lng: 120.99536, lat: 24.78694, type: "極陡斜坡", slope: 23.09, routeId: "O", name: "西側外環線" },
-            { id: "節點O15", lng: 120.99538, lat: 24.78622, type: "極危險陡坡", slope: 34.43, routeId: "O", name: "西側外環線" },
-            { id: "節點O16", lng: 120.99535, lat: 24.78573, type: "陡斜坡", slope: 14.05, routeId: "O", name: "西側外環線" },
-            { id: "節點O17", lng: 120.99536, lat: 24.78567, type: "極陡斜坡", slope: 28.67, routeId: "O", name: "西側外環線" },
-            { id: "節點O18", lng: 120.99600, lat: 24.78448, type: "極陡斜坡", slope: 23.09, routeId: "O", name: "西側外環線" },
-            { id: "節點O19", lng: 120.99669, lat: 24.78405, type: "極陡斜坡", slope: 19.44, routeId: "O", name: "西側外環線" },
-            { id: "終點(研三舍)", lng: 120.99667, lat: 24.78396, type: "終點/平路", slope: 0, routeId: "O", name: "西側外環線" }
-        ];
-        const routeB = [
-            { id: "起點(工程二館)", lng: 120.99757, lat: 24.78866, type: "起點", slope: 0, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B1", lng: 120.99763, lat: 24.78848, type: "轉彎處", slope: 0, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B2", lng: 120.99808, lat: 24.78846, type: "轉彎處", slope: 0, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B3", lng: 120.99818, lat: 24.78801, type: "路面不平/斜坡", slope: 8.75, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B4", lng: 120.99818, lat: 24.78791, type: "緩斜坡", slope: 6.99, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B5", lng: 120.99810, lat: 24.78747, type: "路面不平整", slope: 0, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B7", lng: 120.99868, lat: 24.78706, type: "路面不平/陡坡", slope: 14.05, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B8", lng: 120.99873, lat: 24.78695, type: "路面不平/陡坡", slope: 15.84, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B9", lng: 120.99901, lat: 24.78594, type: "路面不平整", slope: 0, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B10", lng: 120.99900, lat: 24.78587, type: "極陡斜坡", slope: 19.44, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B11", lng: 121.00033, lat: 24.78484, type: "轉彎/陡斜坡", slope: 12.28, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B14", lng: 121.00007, lat: 24.78438, type: "路面不平/極陡", slope: 26.79, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B15", lng: 120.99951, lat: 24.78399, type: "緩斜坡", slope: 5.24, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B19", lng: 120.99785, lat: 24.78410, type: "路面不平/陡坡", slope: 12.28, routeId: "B", name: "東側斜坡線" },
-            { id: "節點B22", lng: 120.99678, lat: 24.78411, type: "轉彎處", slope: 0, routeId: "B", name: "東側斜坡線" },
-            { id: "終點(研三舍)", lng: 120.99671, lat: 24.78403, type: "終點/平路", slope: 0, routeId: "B", name: "東側斜坡線" }
-        ];
-        const routeG = [
-            { id: "起點(工程二館)", lng: 120.99769, lat: 24.78869, type: "起點", slope: 0, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G1", lng: 120.99767, lat: 24.78848, type: "轉彎微緩坡", slope: 3.49, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G2", lng: 120.99813, lat: 24.78850, type: "微幅平緩坡", slope: 1.75, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G4", lng: 120.99821, lat: 24.78753, type: "標準無障礙坡", slope: 8.75, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G5", lng: 120.99818, lat: 24.78669, type: "平緩坡", slope: 5.24, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G6", lng: 120.99825, lat: 24.78661, type: "標準無障礙坡", slope: 8.75, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G7", lng: 120.99797, lat: 24.78625, type: "標準無障礙坡", slope: 8.75, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G8", lng: 120.99799, lat: 24.78560, type: "平緩坡道", slope: 6.99, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G9", lng: 120.99794, lat: 24.78462, type: "標準無障礙坡", slope: 8.75, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "節點G11", lng: 120.99711, lat: 24.78413, type: "轉彎平緩坡", slope: 5.24, routeId: "G", name: "綠色快捷無障礙線" },
-            { id: "終點(研三舍)", lng: 120.99704, lat: 24.78390, type: "終點/安全抵達", slope: 12.28, routeId: "G", name: "綠色快捷無障礙線" }
+            { id: "起點(工程二館)", lng: 120.99743, lat: 24.78846, type: "起點", slope: 0, routeId: "P" },
+            { id: "節點P01", lng: 120.99752, lat: 24.78847, type: "轉彎處", slope: 0, routeId: "P" },
+            { id: "節點P02", lng: 120.9971,  lat: 24.78857, type: "陡斜坡", slope: 17.63, routeId: "P" },
+            { id: "節點P03", lng: 120.99722, lat: 24.78835, type: "緩斜坡", slope: 6.99, routeId: "P" },
+            { id: "節點P04", lng: 120.99728, lat: 24.78746, type: "轉彎處", slope: 0, routeId: "P" },
+            { id: "節點P05", lng: 120.99706, lat: 24.7874,  type: "陡斜坡", slope: 8.75, routeId: "P" },
+            { id: "節點P06", lng: 120.99704, lat: 24.78727, type: "緩斜坡", slope: 3.49, routeId: "P" },
+            { id: "節點P07", lng: 120.99703, lat: 24.78657, type: "緩斜坡", slope: 6.99, routeId: "P" },
+            { id: "節點P08", lng: 120.99706, lat: 24.78634, type: "緩斜坡", slope: 6.99, routeId: "P" },
+            { id: "節點P09", lng: 120.99701, lat: 24.78597, type: "陡斜坡", slope: 8.75, routeId: "P" },
+            { id: "節點P10", lng: 120.997,   lat: 24.78587, type: "連續階梯(危險)", slope: 0, routeId: "P" },
+            { id: "節點P11", lng: 120.99702, lat: 24.78574, type: "連續階梯(危險)", slope: 0, routeId: "P" },
+            { id: "節點P12", lng: 120.99697, lat: 24.78546, type: "陡斜坡", slope: 10.51, routeId: "P" },
+            { id: "節點P13", lng: 120.99685, lat: 24.78538, type: "緩斜坡", slope: 6.99, routeId: "P" },
+            { id: "節點P14", lng: 120.99672, lat: 24.78415, type: "陡斜坡", slope: 10.51, routeId: "P" },
+            { id: "終點(研三舍)",   lng: 120.99671, lat: 24.78403, type: "終點/斜坡", slope: 10.51, routeId: "P" }
         ];
 
-        // 38 個無障礙坡道座標資料
+        const routeO = [
+            { id: "起點(工程二館)", lng: 120.99756, lat: 24.78850, type: "起點", slope: 0, routeId: "O" },
+            { id: "節點O1", lng: 120.99759, lat: 24.78853, type: "轉彎處", slope: 0, routeId: "O" },
+            { id: "節點O2", lng: 120.99710, lat: 24.78853, type: "極陡斜坡", slope: 21.26, routeId: "O" },
+            { id: "節點O3", lng: 120.99717, lat: 24.78829, type: "轉彎處", slope: 0, routeId: "O" },
+            { id: "節點O4", lng: 120.99595, lat: 24.78837, type: "無障礙坡道", slope: 8.75, routeId: "O" },
+            { id: "節點O5", lng: 120.99601, lat: 24.78831, type: "轉彎處", slope: 0, routeId: "O" },
+            { id: "節點O7", lng: 120.99592, lat: 24.78830, type: "轉彎處", slope: 0, routeId: "O" },
+            { id: "節點O8", lng: 120.99596, lat: 24.78787, type: "轉彎處", slope: 0, routeId: "O" },
+            { id: "節點O10", lng: 120.99556, lat: 24.78788, type: "無障礙坡道", slope: 6.99, routeId: "O" },
+            { id: "節點O11", lng: 120.99538, lat: 24.78764, type: "陡斜坡", slope: 12.28, routeId: "O" },
+            { id: "節點O12", lng: 120.99540, lat: 24.78724, type: "路面不平整", slope: 0, routeId: "O" },
+            { id: "節點O13", lng: 120.99536, lat: 24.78694, type: "極陡斜坡", slope: 23.09, routeId: "O" },
+            { id: "節點O15", lng: 120.99538, lat: 24.78622, type: "極危險陡坡", slope: 34.43, routeId: "O" },
+            { id: "節點O16", lng: 120.99535, lat: 24.78573, type: "陡斜坡", slope: 14.05, routeId: "O" },
+            { id: "節點O17", lng: 120.99536, lat: 24.78567, type: "極陡斜坡", slope: 28.67, routeId: "O" },
+            { id: "節點O18", lng: 120.99600, lat: 24.78448, type: "極陡斜坡", slope: 23.09, routeId: "O" },
+            { id: "節點O19", lng: 120.99669, lat: 24.78405, type: "極陡斜坡", slope: 19.44, routeId: "O" },
+            { id: "終點(研三舍)", lng: 120.99667, lat: 24.78396, type: "終點/平路", slope: 0, routeId: "O" }
+        ];
+
+        const routeB = [
+            { id: "起點(工程二館)", lng: 120.99757, lat: 24.78866, type: "起點", slope: 0, routeId: "B" },
+            { id: "節點B1", lng: 120.99763, lat: 24.78848, type: "轉彎處", slope: 0, routeId: "B" },
+            { id: "節點B2", lng: 120.99808, lat: 24.78846, type: "轉彎處", slope: 0, routeId: "B" },
+            { id: "節點B3", lng: 120.99818, lat: 24.78801, type: "路面不平/斜坡", slope: 8.75, routeId: "B" },
+            { id: "節點B4", lng: 120.99818, lat: 24.78791, type: "緩斜坡", slope: 6.99, routeId: "B" },
+            { id: "節點B5", lng: 120.99810, lat: 24.78747, type: "路面不平整", slope: 0, routeId: "B" },
+            { id: "節點B7", lng: 120.99868, lat: 24.78706, type: "路面不平/陡坡", slope: 14.05, routeId: "B" },
+            { id: "節點B8", lng: 120.99873, lat: 24.78695, type: "路面不平/陡坡", slope: 15.84, routeId: "B" },
+            { id: "節點B9", lng: 120.99901, lat: 24.78594, type: "路面不平整", slope: 0, routeId: "B" },
+            { id: "節點B10", lng: 120.99900, lat: 24.78587, type: "極陡斜坡", slope: 19.44, routeId: "B" },
+            { id: "節點B11", lng: 121.00033, lat: 24.78484, type: "轉彎/陡斜坡", slope: 12.28, routeId: "B" },
+            { id: "節點B14", lng: 121.00007, lat: 24.78438, type: "路面不平/極陡", slope: 26.79, routeId: "B" },
+            { id: "節點B15", lng: 120.99951, lat: 24.78399, type: "緩斜坡", slope: 5.24, routeId: "B" },
+            { id: "節點B19", lng: 120.99785, lat: 24.78410, type: "路面不平/陡坡", slope: 12.28, routeId: "B" },
+            { id: "節點B22", lng: 120.99678, lat: 24.78411, type: "轉彎處", slope: 0, routeId: "B" },
+            { id: "終點(研三舍)", lng: 120.99671, lat: 24.78403, type: "終點/平路", slope: 0, routeId: "B" }
+        ];
+
+        const routeG = [
+            { id: "起點(工程二館)", lng: 120.99769, lat: 24.78869, type: "起點", slope: 0, routeId: "G" },
+            { id: "節點G1", lng: 120.99767, lat: 24.78848, type: "轉彎微緩坡", slope: 3.49, routeId: "G" },
+            { id: "節點G2", lng: 120.99813, lat: 24.78850, type: "微幅平緩坡", slope: 1.75, routeId: "G" },
+            { id: "節點G4", lng: 120.99821, lat: 24.78753, type: "標準無障礙坡", slope: 8.75, routeId: "G" },
+            { id: "節點G5", lng: 120.99818, lat: 24.78669, type: "平緩坡", slope: 5.24, routeId: "G" },
+            { id: "節點G6", lng: 120.99825, lat: 24.78661, type: "標準無障礙坡", slope: 8.75, routeId: "G" },
+            { id: "節點G7", lng: 120.99797, lat: 24.78625, type: "標準無障礙坡", slope: 8.75, routeId: "G" },
+            { id: "節點G8", lng: 120.99799, lat: 24.78560, type: "平緩坡道", slope: 6.99, routeId: "G" },
+            { id: "節點G9", lng: 120.99794, lat: 24.78462, type: "標準無障礙坡", slope: 8.75, routeId: "G" },
+            { id: "節點G11", lng: 120.99711, lat: 24.78413, type: "轉彎平緩坡", slope: 5.24, routeId: "G" },
+            { id: "終點(研三舍)", lng: 120.99704, lat: 24.78390, type: "終點/安全抵達", slope: 12.28, routeId: "G" }
+        ];
+
         const rampData = [
             { id: "坡道 1", lat: 24.78662, lng: 120.99619 },
             { id: "坡道 2", lat: 24.78962, lng: 120.99516 },
@@ -321,348 +365,125 @@
             { id: "坡道 12", lat: 24.79021, lng: 120.99651 },
             { id: "坡道 13", lat: 24.79025, lng: 120.99594 },
             { id: "坡道 14", lat: 24.78795, lng: 120.99554 },
-            { id: "坡道 15", lat: 24.78788, lng: 120.99627 },
-            { id: "坡道 16", lat: 24.78723, lng: 120.99599 },
-            { id: "坡道 17", lat: 24.78569, lng: 120.99568 },
-            { id: "坡道 18", lat: 24.78618, lng: 120.99585 },
-            { id: "坡道 19", lat: 24.78652, lng: 120.99864 },
-            { id: "坡道 20", lat: 24.78670, lng: 120.99815 },
-            { id: "坡道 21", lat: 24.78645, lng: 121.00162 },
-            { id: "坡道 22", lat: 24.78431, lng: 120.99740 },
-            { id: "坡道 23", lat: 24.78449, lng: 120.99539 },
-            { id: "坡道 24", lat: 24.78385, lng: 120.99638 },
-            { id: "坡道 25", lat: 24.78571, lng: 120.99753 },
-            { id: "坡道 26", lat: 24.78925, lng: 120.99645 },
-            { id: "坡道 27", lat: 24.78680, lng: 120.99660 },
-            { id: "坡道 28", lat: 24.78706, lng: 120.99652 },
-            { id: "坡道 29", lat: 24.78729, lng: 120.99657 },
-            { id: "坡道 30", lat: 24.78429, lng: 120.99572 },
-            { id: "坡道 31", lat: 24.78968, lng: 120.99746 },
-            { id: "坡道 32", lat: 24.78887, lng: 120.99591 },
-            { id: "坡道 33", lat: 24.78936, lng: 120.99805 },
-            { id: "坡道 34", lat: 24.78523, lng: 120.99850 },
-            { id: "坡道 35", lat: 24.79008, lng: 120.99723 },
-            { id: "坡道 36", lat: 24.78975, lng: 120.99705 },
-            { id: "坡道 37", lat: 24.78674, lng: 120.99709 },
-            { id: "坡道 38", lat: 24.78698, lng: 120.99751 }
+            { id: "坡道 15", lat: 24.78785, lng: 120.99478 }
         ];
 
-        const allRoutes = { 'P': routeP, 'O': routeO, 'B': routeB, 'G': routeG };
-        const rawData = [...routeP, ...routeO, ...routeB, ...routeG];
+        const allRoutesData = [...routeP, ...routeO, ...routeB, ...routeG];
 
         // ==========================================
-        // 3. 舒適度評分演算與動態 UI 渲染
-        // ==========================================
-        const routeEvaluations = [
-            { id: 'G', name: '路線 G (綠色快捷無障礙線)', desc: '最推薦。全程無階梯且路面平整；仍有少數陡坡須注意。' },
-            { id: 'P', name: '路線 P (浩然步道)',  desc: '不推薦輪椅通行。路徑包含無法迴避的階梯區域。' },
-            { id: 'B', name: '路線 B (東側斜坡線)', desc: '推行極度吃力。沿線路面不平整，且含有多段坡度 15% 以上之陡坡。' },
-            { id: 'O', name: '路線 O (西側外環線)', desc: '高度危險路段。局部縱坡坡度高達 34.4%，極易發生輪椅傾倒或下滑失控風險。' }
-        ];
-
-        function renderRouteOptions() {
-            const container = document.getElementById('route-options-container');
-            container.innerHTML = '';
-            const sorted = [...routeEvaluations].sort((a, b) => b.score - a.score);
-            
-            sorted.forEach(route => {
-                const isActive = route.id === selectedRouteId ? 'active' : '';
-                const html = `
-                    <div class="route-option ${isActive}" onclick="selectRoute('${route.id}')">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span><strong>${route.name}</strong></span>
-                        </div>
-                        <div class="route-meta">${route.desc}</div>
-                    </div>
-                `;
-                container.innerHTML += html;
-            });
-
-            const currentSelected = routeEvaluations.find(r => r.id === selectedRouteId);
-            document.getElementById('nav-panel-title').innerText = `導航中: ${currentSelected.name.split(' (')[0]}`;
-        }
-
-        // ==========================================
-        // 全域功能函式
-        // ==========================================
-        function selectRoute(routeId) {
-            selectedRouteId = routeId;
-            renderRouteOptions();
-            updateMapLayers();
-            injectArPoints(); 
-
-            const panel = document.getElementById('nav-interface');
-            if (!panel.classList.contains('collapsed')) {
-                panel.classList.add('collapsed');
-                const icon = panel.querySelector('.toggle-panel-btn i');
-                icon.className = "fa-solid fa-chevron-down";
-            }
-        }
-
-        function togglePanel(event) {
-            if (event) event.stopPropagation();
-            const panel = document.getElementById('nav-interface');
-            const icon = panel.querySelector('.toggle-panel-btn i');
-            
-            if (panel.classList.contains('collapsed')) {
-                panel.classList.remove('collapsed');
-                icon.className = "fa-solid fa-chevron-up";
-            } else {
-                panel.classList.add('collapsed');
-                icon.className = "fa-solid fa-chevron-down";
-            }
-        }
-
-        // 優化項目：處理通報視窗喚起的統一函式
-        function triggerReportBox(lngLat) {
-            currentReportLngLat = lngLat;
-            document.getElementById('coord-display').innerText = `${lngLat.lng.toFixed(5)}, ${lngLat.lat.toFixed(5)}`;
-            document.getElementById('report-box').style.display = 'block';
-        }
-
-        function updateMapLayers() {
-            if (!map.getLayer('highlight-line-layer')) return;
-            map.setPaintProperty('highlight-line-layer', 'line-width', ['case', ['==', ['get', 'route'], selectedRouteId], 6, 1.5]);
-            map.setPaintProperty('highlight-line-layer', 'line-opacity', ['case', ['==', ['get', 'route'], selectedRouteId], 1.0, 0.2]);
-            
-            map.setPaintProperty('nodes-layer', 'circle-radius', ['case', ['==', ['get', 'routeId'], selectedRouteId], 8, 4]);
-            map.setPaintProperty('nodes-layer', 'circle-opacity', ['case', ['==', ['get', 'routeId'], selectedRouteId], 1.0, 0.25]);
-            map.setPaintProperty('nodes-layer', 'circle-stroke-opacity', ['case', ['==', ['get', 'routeId'], selectedRouteId], 1.0, 0.25]);
-            map.setPaintProperty('nodes-layer', 'circle-stroke-width', ['case', ['==', ['get', 'routeId'], selectedRouteId], 3, 1]);
-        }
-
-        function toggleViewMode() {
-            const body = document.body;
-            const btn = document.getElementById('toggle-view-btn');
-            body.classList.toggle('ar-mode');
-            
-            if (body.classList.contains('ar-mode')) {
-                btn.innerHTML = '<i class="fa-solid fa-map"></i>';
-                btn.title = "返回地圖";
-            } else {
-                btn.innerHTML = '<i class="fa-solid fa-eye"></i>';
-                btn.title = "開啟 AR 鏡頭";
-            }
-        }
-
-        function injectArPoints() {
-            const container = document.getElementById('ar-points-container');
-            if(!container) return;
-            container.innerHTML = '';
-            const currentRoute = allRoutes[selectedRouteId];
-            if(currentRoute) {
-                currentRoute.forEach(pt => {
-                    const el = document.createElement('a-entity');
-                    el.setAttribute('gps-entity-place', `latitude: ${pt.lat}; longitude: ${pt.lng}`);
-                    el.setAttribute('geometry', 'primitive: sphere; radius: 2');
-                    el.setAttribute('material', 'color: red'); 
-                    container.appendChild(el);
-                });
-            }
-        }
-
-        function clearAllCloudMarkers() {
-            for (let key in window.activeCloudMarkers) {
-                window.activeCloudMarkers[key].remove();
-            }
-            window.activeCloudMarkers = {};
-        }
-
-        // ==========================================
-        // 4. MAPBOX 圖層高亮與動態切換
+        // 3. 地圖與圖層初始化
         // ==========================================
         map.on('load', () => {
-            // 優化項目：網頁初始化時自動跳出漂浮引導 Toast (4秒後自動淡出)
-            const guideToast = document.createElement('div');
-            guideToast.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> <b>即時路況回報：</b>手機【長按地圖空白處】或電腦【點擊滑鼠右鍵】即可通報路況喔！';
-            guideToast.style.cssText = `
-                position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-                background: rgba(0, 0, 0, 0.85); color: white; padding: 10px 16px;
-                border-radius: 30px; font-size: 12px; z-index: 99999; text-align: center;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none;
-                transition: opacity 0.5s ease; width: 85%; max-width: 340px;
-            `;
-            document.body.appendChild(guideToast);
-            
-            setTimeout(() => {
-                guideToast.style.opacity = '0';
-                setTimeout(() => guideToast.remove(), 500);
-            }, 4000);
+            // 填入無障礙坡道點位
+            rampData.forEach((ramp) => {
+                new mapboxgl.Marker({ color: '#4ea8de' })
+                    .setLngLat([ramp.lng, ramp.lat])
+                    .setPopup(new mapboxgl.Popup({ offset: 10 }).setHTML(`<strong>🛹 ${ramp.id}</strong>`))
+                    .addTo(map);
+            });
 
-            renderRouteOptions();
+            // 繪製推薦路線線段
+            const routesGeoJSON = {
+                'type': 'FeatureCollection',
+                'features': [
+                    { 'type': 'Feature', 'properties': { 'route': 'P' }, 'geometry': { 'type': 'LineString', 'coordinates': routeP.map(i => [i.lng, i.lat]) } },
+                    { 'type': 'Feature', 'properties': { 'route': 'O' }, 'geometry': { 'type': 'LineString', 'coordinates': routeO.map(i => [i.lng, i.lat]) } },
+                    { 'type': 'Feature', 'properties': { 'route': 'B' }, 'geometry': { 'type': 'LineString', 'coordinates': routeB.map(i => [i.lng, i.lat]) } },
+                    { 'type': 'Feature', 'properties': { 'route': 'G' }, 'geometry': { 'type': 'LineString', 'coordinates': routeG.map(i => [i.lng, i.lat]) } }
+                ]
+            };
 
-            document.getElementById('nav-interface').classList.add('collapsed');
-            document.querySelector('.toggle-panel-btn i').className = "fa-solid fa-chevron-down";
-
-            const featuresLine = [
-                { 'type': 'Feature', 'properties': { 'route': 'P' }, 'geometry': { 'type': 'LineString', 'coordinates': routeP.map(i => [i.lng, i.lat]) } },
-                { 'type': 'Feature', 'properties': { 'route': 'O' }, 'geometry': { 'type': 'LineString', 'coordinates': routeO.map(i => [i.lng, i.lat]) } },
-                { 'type': 'Feature', 'properties': { 'route': 'B' }, 'geometry': { 'type': 'LineString', 'coordinates': routeB.map(i => [i.lng, i.lat]) } },
-                { 'type': 'Feature', 'properties': { 'route': 'G' }, 'geometry': { 'type': 'LineString', 'coordinates': routeG.map(i => [i.lng, i.lat]) } }
-            ];
-            map.addSource('base-line-source', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': featuresLine } });
-            
-            map.addLayer({ 'id': 'base-line-layer', 'type': 'line', 'source': 'base-line-source', 'paint': { 'line-color': '#ccc', 'line-width': 2, 'line-dasharray': [2, 2] } });
-
+            map.addSource('highlight-lines', { 'type': 'geojson', 'data': routesGeoJSON });
             map.addLayer({
-                'id': 'highlight-line-layer', 'type': 'line', 'source': 'base-line-source',
+                'id': 'highlight-line-layer', 'type': 'line', 'source': 'highlight-lines',
+                'layout': { 'line-join': 'round', 'line-cap': 'round' },
                 'paint': {
-                    'line-color': ['case', 
-                        ['==', ['get', 'route'], 'P'], '#e533ff', 
-                        ['==', ['get', 'route'], 'O'], '#ffaa00', 
-                        ['==', ['get', 'route'], 'B'], '#3388ff', 
-                        '#28a745'
-                    ],
-                    'line-width': 6,
-                    'line-opacity': 1.0
+                    'line-color': ['case', ['==', ['get', 'route'], 'P'], '#e533ff', ['==', ['get', 'route'], 'O'], '#ffaa00', ['==', ['get', 'route'], 'B'], '#3388ff', '#28a745'],
+                    'line-width': 2, 'line-opacity': 0.4
                 }
             });
 
-            const featuresPoints = rawData.map(item => ({
+            // 繪製路網節點
+            const featuresPoints = allRoutesData.map(item => ({
                 'type': 'Feature', 'geometry': { 'type': 'Point', 'coordinates': [item.lng, item.lat] },
                 'properties': { 'id': item.id, 'type': item.type, 'slope': item.slope, 'routeId': item.routeId }
             }));
+
             map.addSource('nodes-source', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': featuresPoints } });
-            
             map.addLayer({
                 'id': 'nodes-layer', 'type': 'circle', 'source': 'nodes-source',
                 'paint': {
-                    'circle-radius': 8,
+                    'circle-radius': 5,
                     'circle-color': ['case', ['==', ['get', 'type'], '連續階梯(危險)'], '#ff4d4d', ['>', ['get', 'slope'], 8.33], '#ff9900', ['>', ['get', 'slope'], 0], '#ffff4d', '#4dff4d'],
-                    'circle-stroke-width': 3,
-                    'circle-stroke-color': ['case', 
-                        ['==', ['get', 'routeId'], 'P'], '#e533ff', 
-                        ['==', ['get', 'routeId'], 'O'], '#ffaa00', 
-                        ['==', ['get', 'routeId'], 'B'], '#3388ff', 
-                        '#28a745'
-                    ],
-                    'circle-opacity': 1.0,
-                    'circle-stroke-opacity': 1.0
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': ['case', ['==', ['get', 'routeId'], 'P'], '#e533ff', ['==', ['get', 'routeId'], 'O'], '#ffaa00', ['==', ['get', 'routeId'], 'B'], '#3388ff', '#28a745']
                 }
             });
 
-            // 加入 38 個無障礙坡道的資料源與圖層
-            map.addSource('ramp-source', {
-                'type': 'geojson',
-                'data': { 'type': 'FeatureCollection', 'features': rampData.map(item => ({
-                    'type': 'Feature', 'geometry': { 'type': 'Point', 'coordinates': [item.lng, item.lat] },
-                    'properties': { 'id': item.id, 'type': '無障礙坡道' }
-                })) }
+            // 功能 1：點擊地圖抓取位置並產生「即時路況動態暫存標記」
+            map.on('click', (e) => {
+                if (document.body.classList.contains('ar-mode')) return;
+                currentReportLngLat = e.lngLat;
+                
+                // 更新回報視窗座標並打開它
+                document.getElementById('coord-display').innerText = `${currentReportLngLat.lng.toFixed(5)}, ${currentReportLngLat.lat.toFixed(5)}`;
+                document.getElementById('report-box').style.display = 'block';
+
+                // 移除上一個未提交的暫存標記（如果有）
+                if (tempMarker) tempMarker.remove();
+
+                // 在地圖選取點建立帶有呼吸波紋動畫的藍色圖示
+                const el = document.createElement('div');
+                el.className = 'temp-report-marker';
+                tempMarker = new mapboxgl.Marker(el)
+                    .setLngLat([currentReportLngLat.lng, currentReportLngLat.lat])
+                    .addTo(map);
             });
 
-            map.addLayer({
-                'id': 'ramp-layer', 
-                'type': 'circle', 
-                'source': 'ramp-source',
-                'paint': {
-                    'circle-radius': 4,
-                    'circle-color': '#4ea8de', 
-                    'circle-stroke-width': 1.5,
-                    'stroke-color': '#ffffff' 
-                }
-            });
+            selectRoute('G');
+            renderPanelOptions();
 
-            updateMapLayers();
-            injectArPoints();
-
-            // 點擊圓點彈窗 (原本的節點)
-            map.on('click', 'nodes-layer', (e) => {
-                const coordinates = e.features[0].geometry.coordinates.slice();
-                const props = e.features[0].properties;
-                if(props.routeId !== selectedRouteId) return; 
-                const rColor = props.routeId === 'P' ? '#e533ff' : props.routeId === 'O' ? '#ffaa00' : props.routeId === 'B' ? '#3388ff' : '#28a745';
-                const popupContent = `<div style="padding: 3px; color:#333; font-size:12px;"><h4 style="margin: 0 0 4px 0; font-size: 13px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${rColor};"></span> ${props.id}</h4><b>現地狀況：</b>${props.type}<br><b>實測坡度：</b>${props.slope}%</div>`;
-                new mapboxgl.Popup().setLngLat(coordinates).setHTML(popupContent).addTo(map);
-            });
-
-            // 點擊無障礙坡道彈出視窗
-            map.on('click', 'ramp-layer', (e) => {
-                const props = e.features[0].properties;
-                new mapboxgl.Popup().setLngLat(e.features[0].geometry.coordinates.slice()).setHTML(`
-                    <div style="font-family: sans-serif; padding: 4px 2px; color:#333;">
-                        <p style="margin: 0; font-size:13px; font-weight:bold;">📍 設施：${props.type}</p>
-                    </div>
-                `).addTo(map);
-            });
-
-            // 游標互動
-            const interactiveLayers = ['nodes-layer', 'ramp-layer'];
-            interactiveLayers.forEach(layer => {
-                map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
-                map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
-            });
-
-            // ==========================================
-            // 5. 雲端通報相關功能修復（已修正行動裝置相容性）
-            // ==========================================
-            let touchTimeout = null;
-            
-            // [電腦端] 地圖右鍵喚起通報表單
-            map.on('contextmenu', (e) => {
-                triggerReportBox(e.lngLat);
-            });
-
-            // [行動裝置端] 自訂觸控長按（延時 800 毫秒）機制
-            map.on('touchstart', (e) => {
-                // 如果點擊到的是現有點位，先讓給現有點位觸發，不喚起新通報
-                const features = map.queryRenderedFeatures(e.point, { layers: ['nodes-layer', 'ramp-layer'] });
-                if (features.length > 0) return;
-
-                if (touchTimeout) clearTimeout(touchTimeout);
-
-                touchTimeout = setTimeout(() => {
-                    triggerReportBox(e.lngLat);
-                }, 800);
-            });
-
-            map.on('touchend', () => {
-                if (touchTimeout) clearTimeout(touchTimeout);
-            });
-
-            map.on('touchmove', () => {
-                if (touchTimeout) clearTimeout(touchTimeout);
-            });
-
-            // 送出通報
-            document.getElementById('submit-report').onclick = () => {
-                if(!currentReportLngLat) return;
-                const type = document.getElementById('obstacle-type').value;
-                database.ref('cloudReports').push({
-                    lat: currentReportLngLat.lat,
-                    lng: currentReportLngLat.lng,
-                    type: type,
-                    timestamp: Date.now()
-                });
-                document.getElementById('report-box').style.display = 'none';
-                alert('通報已送出至雲端！');
-            };
-
-            // 取消通報
-            document.getElementById('cancel-report').onclick = () => {
-                document.getElementById('report-box').style.display = 'none';
-            };
-
-            // FIREBASE 雲端即時監聽器
+            // FIREBASE 雲端即時動態數據監聽器 (功能 2：區分待審核與核准狀態)
             database.ref('cloudReports').on('value', (snapshot) => {
                 clearAllCloudMarkers(); 
                 const data = snapshot.val();
+                currentFirebaseDataCache = data; // 寫入緩存供管理員面板使用
+                
                 if (data) {
                     Object.keys(data).forEach((key) => {
                         const report = data[key];
-                        
-                        // 建立自訂的紅色警告標記
                         const el = document.createElement('div');
-                        el.className = 'cloud-marker';
                         
-                        // 建立彈出視窗
-                        const popup = new mapboxgl.Popup({ offset: 15 }).setHTML(`
-                            <div style="font-size:12px; color:#333;">
-                                <strong style="color:#ff4d4d;">⚠️ 障礙通報</strong><br>
-                                類型：${report.type}
-                            </div>
-                        `);
+                        let statusText = "";
+                        // 判斷狀態：若為 approved 顯示紅色警告，其餘（包含 pending）皆顯示虛點待審
+                        if (report.status === 'approved') {
+                            el.className = 'cloud-marker approved';
+                            statusText = `<span style="color:#ff4d4d; font-weight:bold;">🔴 已核准上線</span>`;
+                        } else {
+                            el.className = 'cloud-marker pending';
+                            statusText = `<span style="color:#fca311; font-weight:bold;">🟡 待審核虛點</span>`;
+                        }
                         
-                        // 加到地圖上
+                        // 地圖圖點彈出式視窗內建管理審查功能
+                        let popupHTML = `
+                            <div style="font-size:12px; color:#333; line-height:1.5; min-width:150px;">
+                                <strong style="font-size:13px; color:#0056b3;">⚠️ 即時路況資訊</strong><br>
+                                類型：${report.type}<br>
+                                狀態：${statusText}
+                                <hr style="margin:5px 0; border:none; border-top:1px solid #ddd;">
+                                <div style="display:flex; gap:5px; margin-top:4px;">
+                        `;
+
+                        // 如果此點未通過審核，顯示「核准」按鈕（此處點擊會檢查管理登入狀態或密碼）
+                        if (report.status !== 'approved') {
+                            popupHTML += `<button onclick="directApprove('${key}')" style="background:#28a745; color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; font-size:10px;">核准</button>`;
+                        }
+                        // 任何點位管理員皆可隨時取消刪除
+                        popupHTML += `<button onclick="directDelete('${key}')" style="background:#ff4d4d; color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; font-size:10px;">取消問題</button>`;
+                        popupHTML += `</div></div>`;
+
+                        const popup = new mapboxgl.Popup({ offset: 15 }).setHTML(popupHTML);
+                        
                         const marker = new mapboxgl.Marker(el)
                             .setLngLat([report.lng, report.lat])
                             .setPopup(popup)
@@ -671,9 +492,213 @@
                         window.activeCloudMarkers[key] = marker;
                     });
                 }
+                // 同步更新管理員右側控制面板
+                if (isAdminLoggedIn) { refreshAdminList(data); }
             });
+        });
 
-        }); // map.on('load') 結束括號
+        function clearAllCloudMarkers() {
+            Object.keys(window.activeCloudMarkers).forEach((key) => {
+                window.activeCloudMarkers[key].remove();
+            });
+            window.activeCloudMarkers = {};
+        }
+
+        // ==========================================
+        // 4. 介面控制與導航面板邏輯
+        // ==========================================
+        function togglePanel(e) {
+            e.stopPropagation();
+            const panel = document.getElementById('nav-interface');
+            const icon = panel.querySelector('.toggle-panel-btn i');
+            const title = document.getElementById('nav-panel-title');
+            
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                icon.className = "fa-solid fa-chevron-up";
+                title.innerText = "校園無障礙導航";
+            } else {
+                panel.classList.add('collapsed');
+                icon.className = "fa-solid fa-chevron-down";
+                title.innerText = "校園無障礙導航 (已縮小)";
+            }
+        }
+
+        function updateMapLayers() {
+            if (!map.getLayer('highlight-line-layer')) return;
+            map.setPaintProperty('highlight-line-layer', 'line-width', ['case', ['==', ['get', 'route'], selectedRouteId], 6, 1.5]);
+            map.setPaintProperty('highlight-line-layer', 'line-opacity', ['case', ['==', ['get', 'route'], selectedRouteId], 1.0, 0.2]);
+            map.setPaintProperty('nodes-layer', 'circle-radius', ['case', ['==', ['get', 'routeId'], selectedRouteId], 8, 4]);
+        }
+
+        function selectRoute(routeId) {
+            selectedRouteId = routeId;
+            updateMapLayers();
+            renderARPoints();
+            
+            const options = document.querySelectorAll('.route-option');
+            options.forEach(opt => {
+                opt.classList.toggle('active', opt.getAttribute('data-id') === routeId);
+            });
+        }
+
+        function renderPanelOptions() {
+            const container = document.getElementById('route-options-container');
+            const optionsData = [
+                { id: 'G', title: '路線 G (綠色快捷無障礙線)', meta: '舒適度評分：🌟 9.5 | 全程平緩無階梯，最推薦輪椅族', badge: '安全', badgeClass: 'success' },
+                { id: 'B', title: '路線 B (東側斜坡線)', meta: '舒適度評分：⭐ 6.2 | 部分路面稍微不平整，有少許陡坡', badge: '多陡坡', badgeClass: 'warning' },
+                { id: 'P', title: '路線 P (浩然步道)', meta: '舒適度評分：🌙 4.0 | 包含連續階梯風險，不建議輪椅通行', badge: '有階梯', badgeClass: 'danger' },
+                { id: 'O', title: '路線 O (西側外環線)', meta: '舒適度評分：❌ 2.1 | 極危險陡坡高達 34%，強烈建議避開', badge: '極危險', badgeClass: 'danger' }
+            ];
+
+            container.innerHTML = optionsData.map(opt => `
+                <div class="route-option ${opt.id === selectedRouteId ? 'active' : ''}" data-id="${opt.id}" onclick="selectRoute('${opt.id}')">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>${opt.title}</span>
+                        <span class="badge ${opt.badgeClass}">${opt.badge}</span>
+                    </div>
+                    <div class="route-meta">${opt.meta}</div>
+                </div>
+            `).join('');
+        }
+
+        // ==========================================
+        // 5. AR 模式控制
+        // ==========================================
+        function toggleViewMode() {
+            const body = document.body;
+            const btn = document.getElementById('toggle-view-btn');
+            body.classList.toggle('ar-mode');
+            if (body.classList.contains('ar-mode')) {
+                btn.innerHTML = '<i class="fa-solid fa-map"></i>'; btn.title = "返回地圖";
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-eye"></i>'; btn.title = "開啟 AR 鏡頭";
+            }
+        }
+
+        function renderARPoints() {
+            const container = document.getElementById('ar-points-container');
+            container.innerHTML = '';
+            const activeData = allRoutesData.filter(item => item.routeId === selectedRouteId);
+            
+            activeData.forEach((pt) => {
+                const entity = document.createElement('a-entity');
+                entity.setAttribute('gps-entity-place', `latitude: ${pt.lat}; longitude: ${pt.lng};`);
+                
+                let color = '#4dff4d';
+                if (pt.type.includes('階梯')) color = '#ff4d4d';
+                else if (pt.slope > 8.33) color = '#ff9900';
+                else if (pt.slope > 0) color = '#ffff4d';
+
+                entity.innerHTML = `
+                    <a-sphere radius="2" material="color: ${color}; opacity: 0.9; shader: flat;"></a-sphere>
+                    <a-text value="${pt.id}\n(${pt.type})" scale="15 15 15" align="center" color="#ffffff" position="0 5 0" look-at="[gps-camera]"></a-text>
+                `;
+                container.appendChild(entity);
+            });
+        }
+
+        // ==========================================
+        // 6. 回報視窗互動事件（功能 2：預設塞入 pending 狀態）
+        // ==========================================
+        document.getElementById('cancel-report').onclick = () => {
+            document.getElementById('report-box').style.display = 'none';
+            if (tempMarker) { tempMarker.remove(); tempMarker = null; }
+        };
+
+        document.getElementById('submit-report').onclick = () => {
+            if (!currentReportLngLat) return;
+            const type = document.getElementById('obstacle-type').value;
+            
+            // 預設 status 填入 'pending' 轉為待審核虛點
+            database.ref('cloudReports').push({
+                type: type,
+                lng: currentReportLngLat.lng,
+                lat: currentReportLngLat.lat,
+                status: 'pending', 
+                timestamp: Date.now()
+            }).then(() => {
+                alert('🎉 通報成功！此路點已先進入後台審核，審核通過前會以黃色虛點顯示。');
+                document.getElementById('report-box').style.display = 'none';
+                if (tempMarker) { tempMarker.remove(); tempMarker = null; }
+            }).catch((err) => {
+                alert('上傳失敗：' + err.message);
+            });
+        };
+
+        // ==========================================
+        // 7. 管理員權限驗證與直通控制項
+        // ==========================================
+        function checkAdminAuth() {
+            if (isAdminLoggedIn) return true;
+            const password = prompt("請輸入管理員後台驗證密碼：");
+            if (password === "1234") {
+                isAdminLoggedIn = true;
+                return true;
+            } else {
+                alert("❌ 密碼錯誤，拒絕執行管理員操作！");
+                return false;
+            }
+        }
+
+        // 地圖 Popup 直通核准與取消控制
+        window.directApprove = function(key) {
+            if (!checkAdminAuth()) return;
+            if (confirm("確定要核准此項目，讓它在地圖上變為紅色警示點嗎？")) {
+                database.ref(`cloudReports/${key}`).update({ status: 'approved' })
+                    .then(() => alert("已成功核准並轉為紅色警告點！"));
+            }
+        };
+
+        window.directDelete = function(key) {
+            if (!checkAdminAuth()) return;
+            if (confirm("確定要取消並完全移除此路況問題嗎？")) {
+                database.ref(`cloudReports/${key}`).remove()
+                    .then(() => alert("路況問題已成功取消移除！"));
+            }
+        };
+
+        // ==========================================
+        // 8. 右側按鈕管理員後台面板
+        // ==========================================
+        function openAdminPanel() {
+            if (!checkAdminAuth()) return;
+            document.getElementById('admin-panel').style.display = 'block';
+            refreshAdminList(currentFirebaseDataCache);
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('admin-panel').style.display = 'none';
+        }
+
+        function refreshAdminList(data) {
+            const container = document.getElementById('admin-list-container');
+            if (!data || Object.keys(data).length === 0) {
+                container.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">目前沒有任何障礙通報數據。</div>';
+                return;
+            }
+            
+            let htmlStr = '';
+            Object.keys(data).forEach((key) => {
+                const item = data[key];
+                const isApproved = item.status === 'approved';
+                const statusBadge = isApproved ? '<span style="color:green;">[已核准]</span>' : '<span style="color:orange;">[待審核]</span>';
+                
+                htmlStr += `
+                    <div class="admin-report-item">
+                        <div>
+                            <strong>${item.type}</strong> ${statusBadge}<br>
+                            <span style="font-size:10px; color:#777;">座標: [${item.lng.toFixed(4)}, ${item.lat.toFixed(4)}]</span>
+                        </div>
+                        <div class="admin-btn-group">
+                            ${!isApproved ? `<button class="admin-action-btn approve" onclick="directApprove('${key}')">通過</button>` : ''}
+                            <button class="admin-action-btn delete" onclick="directDelete('${key}')">取消路況</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = htmlStr;
+        }
     </script>
 </body>
 </html>
